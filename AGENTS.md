@@ -1,13 +1,13 @@
 # Agent Guidelines for ReceiptHero
 
-Never run the command dev yourself you can only do build or lint never never DEV!
+## 🚫 FORBIDDEN COMMANDS - NEVER RUN THESE:
+- `npm run dev` or `next dev` - **NEVER USE**
+- `npm start` or `next start` - **NEVER USE**
+- `npm run lint` - **NEVER USE**
 
-## Build/Lint/Test Commands
+## Build/Test Commands
 
 - **Build**: `next build`
-- **Dev server**: `next dev --turbopack`
-- **Start production**: `next start`
-- **Lint**: `next lint`
 - **No tests configured** - add Jest/Playwright if needed
 
 ## Code Style Guidelines
