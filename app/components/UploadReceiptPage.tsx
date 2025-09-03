@@ -2,7 +2,8 @@
 
 import type React from "react";
 import { useState } from "react";
-import { Upload, Star } from "lucide-react";
+import Header from "./Header";
+import Footer from "./Footer";
 
 interface UploadedFile {
   id: string;
@@ -53,183 +54,15 @@ export default function UploadReceiptPage({
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="flex items-center justify-between p-6">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-3 justify-center">
-            <img src="/icon.svg" className="w-6 h-6" />
-            <img
-              src="/logo.svg"
-              className="text-lg font-semibold text-[#101828]"
-              width="107"
-              height="20"
-            />
-          </div>
-        </div>
-        <a
-          href="https://github.com/nutlope"
-          target="_blank"
-          className="flex items-center gap-1.5 px-3.5 py-[7px] rounded bg-white/80 border-[0.7px] border-[#d1d5dc] shadow-sm"
-        >
-          <Star className="h-3.5 w-3.5 text-[#FFC107] fill-[#FFC107]" />
-          <span className="text-sm text-right text-[#1e2939]">
-            Star on GitHub
-          </span>
-        </a>
-      </header>
+      <Header />
 
       <main className="container mx-auto px-6 py-16 max-w-4xl">
         <div className="text-center mb-12">
-          <div className="mb-6 relative">
-            <svg
-              width={79}
-              height={73}
-              viewBox="0 0 79 73"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-[77.58px] h-[71.29px] mx-auto"
-            >
-              <g opacity="0.7">
-                <rect
-                  x="40.6783"
-                  y="8.72017"
-                  width="38.5"
-                  height="51.5"
-                  rx="2.25"
-                  transform="rotate(7.32403 40.6783 8.72017)"
-                  fill="white"
-                />
-                <rect
-                  x="40.6783"
-                  y="8.72017"
-                  width="38.5"
-                  height="51.5"
-                  rx="2.25"
-                  transform="rotate(7.32403 40.6783 8.72017)"
-                  stroke="#E5E7EB"
-                  strokeWidth="0.5"
-                />
-                <rect
-                  x="45.9531"
-                  y="16.7078"
-                  width={17}
-                  height={3}
-                  rx="1.5"
-                  transform="rotate(7.32403 45.9531 16.7078)"
-                  fill="#E5E7EB"
-                />
-                <rect
-                  x="50.0199"
-                  y="24.2881"
-                  width={21}
-                  height={2}
-                  rx={1}
-                  transform="rotate(7.32403 50.0199 24.2881)"
-                  fill="#D1D5DC"
-                />
-                <rect
-                  x="48.7451"
-                  y="34.2065"
-                  width={21}
-                  height={2}
-                  rx={1}
-                  transform="rotate(7.32403 48.7451 34.2065)"
-                  fill="#D1D5DC"
-                />
-                <rect
-                  x="47.4703"
-                  y="44.1249"
-                  width={21}
-                  height={2}
-                  rx={1}
-                  transform="rotate(7.32403 47.4703 44.1249)"
-                  fill="#D1D5DC"
-                />
-              </g>
-              <rect
-                x="0.589775"
-                y="21.9504"
-                width="38.7"
-                height="51.7"
-                rx="2.35"
-                transform="rotate(-10.9737 0.589775 21.9504)"
-                stroke="#D1D5DC"
-                strokeWidth="0.7"
-              />
-              <rect
-                x="21.9929"
-                y="0.6"
-                width="38.8"
-                height="51.8"
-                rx="2.4"
-                fill="white"
-              />
-              <rect
-                x="21.9929"
-                y="0.6"
-                width="38.8"
-                height="51.8"
-                rx="2.4"
-                stroke="#D1D5DC"
-                strokeWidth="0.8"
-              />
-              <rect
-                x="28.3929"
-                y={8}
-                width={17}
-                height={3}
-                rx="1.5"
-                fill="#D1D5DC"
-              />
-              <rect
-                x="33.3929"
-                y={15}
-                width={21}
-                height={2}
-                rx={1}
-                fill="#99A1AF"
-              />
-              <rect
-                x="33.3929"
-                y={25}
-                width={21}
-                height={2}
-                rx={1}
-                fill="#99A1AF"
-              />
-              <rect
-                x="33.3929"
-                y={35}
-                width={21}
-                height={2}
-                rx={1}
-                fill="#99A1AF"
-              />
-              <rect
-                x="28.3929"
-                y={15}
-                width={4}
-                height={2}
-                rx={1}
-                fill="#99A1AF"
-              />
-              <rect
-                x="28.3929"
-                y={25}
-                width={4}
-                height={2}
-                rx={1}
-                fill="#99A1AF"
-              />
-              <rect
-                x="28.3929"
-                y={35}
-                width={4}
-                height={2}
-                rx={1}
-                fill="#99A1AF"
-              />
-            </svg>
-          </div>
+          <img
+            src="/receipt-hero.svg"
+            className="w-[77.58px] h-[71.29px] mx-auto"
+            alt="Receipt illustration"
+          />
           <h1 className="text-2xl font-medium mb-4 text-[#030712]">
             Organize Your Receipts
           </h1>
@@ -398,9 +231,7 @@ export default function UploadReceiptPage({
           </button>
         </div>
 
-        <footer className="text-center mt-16 text-sm text-[#555]">
-          Powered by together.ai
-        </footer>
+        <Footer />
       </main>
     </div>
   );
