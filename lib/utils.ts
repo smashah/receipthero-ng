@@ -78,3 +78,37 @@ export function normalizeDate(dateString: string): string {
 export function isValidDateFormat(dateString: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(dateString);
 }
+
+/**
+ * Formats a date string from YYYY-MM-DD to "Month DD, YYYY" format
+ * @param dateString - Date in YYYY-MM-DD format
+ * @returns Formatted date string like "March 15, 2024"
+ */
+export function formatDisplayDate(dateString: string): string {
+  if (!dateString || !isValidDateFormat(dateString)) {
+    return dateString; // Return original if not in expected format
+  }
+
+  try {
+    const date = new Date(dateString + 'T00:00:00'); // Add time to ensure consistent parsing
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.warn('Failed to format date:', dateString, error);
+    return dateString; // Return original on error
+  }
+}
+
+/**
+ * Converts a string to title case (first letter of each word capitalized)
+ * @param str - String to convert
+ * @returns Title case string
+ */
+export function toTitleCase(str: string): string {
+  if (!str) return str;
+  return str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+}

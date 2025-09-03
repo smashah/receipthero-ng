@@ -7,6 +7,7 @@ import type {
   ProcessedReceipt,
   SpendingBreakdown,
 } from "@/lib/types";
+import { formatDisplayDate, toTitleCase } from "@/lib/utils";
 
 interface ResultsPageProps {
   processedReceipts: ProcessedReceipt[];
@@ -121,10 +122,10 @@ export default function ResultsPage({
                     <th className="text-left p-4 font-medium">Receipt</th>
                     <th className="text-left p-4 font-medium">Date</th>
                     <th className="text-left p-4 font-medium">Vendor</th>
-                    <th className="text-left p-4 font-medium">Category</th>
-                    <th className="text-left p-4 font-medium">
-                      Payment Method
-                    </th>
+                     <th className="text-left p-4 font-medium">Category</th>
+                     <th className="text-left p-4 font-medium">
+                       Payment Method
+                     </th>
                     <th className="text-left p-4 font-medium">Tax Amount</th>
                     <th className="text-left p-4 font-medium">Amount</th>
                     <th className="text-left p-4 font-medium">Actions</th>
@@ -140,10 +141,10 @@ export default function ResultsPage({
                           className="w-12 h-12 object-cover rounded border"
                         />
                       </td>
-                      <td className="p-4">{receipt.date}</td>
+                       <td className="p-4">{formatDisplayDate(receipt.date)}</td>
                       <td className="p-4">{receipt.vendor}</td>
-                      <td className="p-4">{receipt.category}</td>
-                      <td className="p-4">{receipt.paymentMethod}</td>
+                       <td className="p-4">{toTitleCase(receipt.category)}</td>
+                       <td className="p-4">{toTitleCase(receipt.paymentMethod)}</td>
                       <td className="p-4">${receipt.taxAmount}</td>
                       <td className="p-4 font-semibold">${receipt.amount}</td>
                       <td className="p-4">

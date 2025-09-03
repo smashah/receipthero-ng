@@ -117,8 +117,8 @@ export default function UploadReceiptPage({
 
     setUploadedFiles((prev) => [...prev, ...newFiles]);
 
-    // Start processing files immediately
-    for (const uploadedFile of newFiles) {
+    // Process all files in parallel
+    const processFilePromises = newFiles.map(async (uploadedFile) => {
       try {
         // Convert file to base64
         const base64 = await new Promise<string>((resolve, reject) => {
@@ -153,35 +153,45 @@ export default function UploadReceiptPage({
             mimeType: uploadedFile.file.type,
           };
 
-          // Update file status
-          setUploadedFiles((prev) =>
-            prev.map((f) =>
-              f.id === uploadedFile.id
-                ? { ...f, status: 'receipt' as const, receipt: processedReceipt, base64, mimeType: uploadedFile.file.type }
-                : f
-            )
-          );
+          return {
+            id: uploadedFile.id,
+            status: 'receipt' as const,
+            receipt: processedReceipt,
+            base64,
+            mimeType: uploadedFile.file.type,
+          };
         } else {
           // No receipt data found
-          setUploadedFiles((prev) =>
-            prev.map((f) =>
-              f.id === uploadedFile.id
-                ? { ...f, status: 'not-receipt' as const, base64, mimeType: uploadedFile.file.type }
-                : f
-            )
-          );
+          return {
+            id: uploadedFile.id,
+            status: 'not-receipt' as const,
+            base64,
+            mimeType: uploadedFile.file.type,
+          };
         }
       } catch (error) {
         console.error('Error processing file:', error);
-        setUploadedFiles((prev) =>
-          prev.map((f) =>
-            f.id === uploadedFile.id
-              ? { ...f, status: 'error' as const, error: error instanceof Error ? error.message : 'Processing failed' }
-              : f
-          )
-        );
+        return {
+          id: uploadedFile.id,
+          status: 'error' as const,
+          error: error instanceof Error ? error.message : 'Processing failed',
+        };
       }
-    }
+    });
+
+    // Wait for all files to be processed in parallel
+    const processedResults = await Promise.all(processFilePromises);
+
+    // Update all files at once with their processed results
+    setUploadedFiles((prev) =>
+      prev.map((file) => {
+        const result = processedResults.find((r) => r.id === file.id);
+        if (result) {
+          return { ...file, ...result };
+        }
+        return file;
+      })
+    );
   };
 
   const removeFile = (id: string) => {
@@ -266,7 +276,7 @@ export default function UploadReceiptPage({
                   >
                     <div className="flex items-center gap-2 flex-1">
                       <p className={`text-xs truncate ${
-                        file.error ? 'text-red-700' : 'text-[#364153]'
+                        file.status === 'error' ? 'text-red-700' : 'text-[#364153]'
                       }`}>
                         {file.name}
                       </p>

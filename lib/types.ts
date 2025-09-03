@@ -27,6 +27,7 @@ export interface UploadedFile {
   file: File;
   status: FileStatus;
   receipt?: ProcessedReceipt;
+  /** Error message - only present when status === 'error' */
   error?: string;
   base64?: string;
   mimeType?: string;
