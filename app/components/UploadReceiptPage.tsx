@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useState } from "react";
+import { useDropzone } from "react-dropzone";
 import Header from "./Header";
 import Footer from "./Footer";
 
@@ -22,11 +23,21 @@ export default function UploadReceiptPage({
 }: UploadReceiptPageProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
-  const handleFileUpload = (files: FileList | null) => {
-    if (!files) return;
+  const onDrop = (acceptedFiles: File[]) => {
+    handleFileUpload(acceptedFiles);
+  };
 
-    const newFiles: UploadedFile[] = Array.from(files).map((file) => ({
-      id: Math.random().toString(36).substr(2, 9),
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    multiple: true,
+    accept: {
+      'image/*': []
+    }
+  });
+
+  const handleFileUpload = (files: File[]) => {
+    const newFiles: UploadedFile[] = files.map((file) => ({
+      id: Math.random().toString(36).slice(2, 11),
       name: file.name,
       file,
     }));
@@ -38,14 +49,7 @@ export default function UploadReceiptPage({
     setUploadedFiles((prev) => prev.filter((file) => file.id !== id));
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    handleFileUpload(e.dataTransfer.files);
-  };
 
   const handleGenerateResults = () => {
     const files = uploadedFiles.map((f) => f.file);
@@ -75,10 +79,10 @@ export default function UploadReceiptPage({
           <div className="w-full md:w-[329px] h-[406px] m-4 bg-gray-50 border border-[#d1d5dc] border-dashed rounded-xl flex flex-col">
             {uploadedFiles.length === 0 && !isProcessing ? (
               <div
-                className="h-full flex flex-col items-center justify-center p-8"
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
+                className="h-full flex flex-col items-center justify-center p-8 cursor-pointer"
+                {...getRootProps()}
               >
+                <input {...getInputProps()} />
                 <div className="w-[46px] h-[46px] mb-6 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg flex items-center justify-center">
                   <svg
                     width={24}
@@ -97,29 +101,15 @@ export default function UploadReceiptPage({
                   </svg>
                 </div>
                 <p className="text-base text-[#101828] mb-2 text-center">
-                  Drag and drop your receipts here
+                  {isDragActive ? "Drop the files here..." : "Drag and drop your receipts here"}
                 </p>
                 <p className="text-base text-[#6a7282] mb-6 text-center">
-                  or click "select files"
+                  or click to select files
                 </p>
-                <button
-                  className="w-[120px] h-10 bg-white border border-[#d1d5dc] rounded-md shadow-sm text-base text-[#364153] hover:bg-gray-50 transition-colors"
-                  style={{ boxShadow: "0px 1px 12px -7px rgba(0,0,0,0.25)" }}
-                  onClick={() => document.getElementById("file-input")?.click()}
-                >
-                  Select Files
-                </button>
-                <input
-                  id="file-input"
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFileUpload(e.target.files)}
-                />
               </div>
             ) : uploadedFiles.length > 0 && !isProcessing ? (
-              <div className="flex flex-col justify-start items-start w-full p-[18px] gap-3">
+              <div className="flex flex-col justify-start items-start w-full p-[18px] gap-3 cursor-pointer" {...getRootProps()}>
+                <input {...getInputProps()} />
                 {uploadedFiles.map((file) => (
                   <div
                     key={file.id}
@@ -130,7 +120,10 @@ export default function UploadReceiptPage({
                       {file.name}
                     </p>
                     <button
-                      onClick={() => removeFile(file.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile(file.id);
+                      }}
                       className="flex-shrink-0 hover:opacity-70 ml-2"
                     >
                       <svg
@@ -154,39 +147,9 @@ export default function UploadReceiptPage({
                     </button>
                   </div>
                 ))}
-                <button
-                  className="w-full h-[33px] flex items-center justify-start px-4 gap-3 rounded-md bg-white border border-[#d1d5dc] hover:bg-gray-50 transition-colors"
-                  style={{ boxShadow: "0px 1px 12px -7px rgba(0,0,0,0.25)" }}
-                  onClick={() =>
-                    document.getElementById("file-input-more")?.click()
-                  }
-                >
-                  <svg
-                    width={14}
-                    height={14}
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-3.5 h-3.5 flex-shrink-0"
-                    preserveAspectRatio="none"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M6.69083 1.44081C6.77286 1.35889 6.88406 1.31287 7 1.31287C7.11594 1.31287 7.22713 1.35889 7.30917 1.44081L9.93417 4.06581C10.0114 4.14875 10.0535 4.25844 10.0515 4.37179C10.0495 4.48513 10.0036 4.59327 9.92345 4.67343C9.84329 4.75359 9.73515 4.7995 9.6218 4.8015C9.50846 4.8035 9.39877 4.76143 9.31583 4.68415L7.4375 2.80581V9.62498C7.4375 9.74101 7.39141 9.85229 7.30936 9.93434C7.22731 10.0164 7.11603 10.0625 7 10.0625C6.88397 10.0625 6.77269 10.0164 6.69064 9.93434C6.60859 9.85229 6.5625 9.74101 6.5625 9.62498V2.80581L4.68417 4.68415C4.60123 4.76143 4.49154 4.8035 4.37819 4.8015C4.26485 4.7995 4.15671 4.75359 4.07655 4.67343C3.9964 4.59327 3.95048 4.48513 3.94848 4.37179C3.94648 4.25844 3.98855 4.14875 4.06583 4.06581L6.69083 1.44081ZM1.75 9.18748C1.86603 9.18748 1.97731 9.23358 2.05936 9.31562C2.14141 9.39767 2.1875 9.50895 2.1875 9.62498V10.9375C2.1875 11.1695 2.27969 11.3921 2.44378 11.5562C2.60788 11.7203 2.83044 11.8125 3.0625 11.8125H10.9375C11.1696 11.8125 11.3921 11.7203 11.5562 11.5562C11.7203 11.3921 11.8125 11.1695 11.8125 10.9375V9.62498C11.8125 9.50895 11.8586 9.39767 11.9406 9.31562C12.0227 9.23358 12.134 9.18748 12.25 9.18748C12.366 9.18748 12.4773 9.23358 12.5594 9.31562C12.6414 9.39767 12.6875 9.50895 12.6875 9.62498V10.9375C12.6875 11.4016 12.5031 11.8467 12.1749 12.1749C11.8467 12.5031 11.4016 12.6875 10.9375 12.6875H3.0625C2.59837 12.6875 2.15325 12.5031 1.82506 12.1749C1.49687 11.8467 1.3125 11.4016 1.3125 10.9375V9.62498C1.3125 9.50895 1.35859 9.39767 1.44064 9.31562C1.52269 9.23358 1.63397 9.18748 1.75 9.18748Z"
-                      fill="#101828"
-                    />
-                  </svg>
-                  <p className="text-xs text-[#101828]">Upload more receipts</p>
-                </button>
-                <input
-                  id="file-input-more"
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFileUpload(e.target.files)}
-                />
+                <p className="text-xs text-[#6a7282] text-center w-full">
+                  {isDragActive ? "Drop files here to add more..." : "Click or drag to add more receipts"}
+                </p>
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center p-8">
