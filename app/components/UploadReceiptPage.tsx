@@ -4,6 +4,7 @@ import type React from "react";
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useOCR } from "@/lib/useOCR";
+import { ProcessedReceipt } from "@/lib/types";
 import Header from "./Header";
 import Footer from "./Footer";
 
@@ -14,7 +15,7 @@ interface UploadedFile {
 }
 
 interface UploadReceiptPageProps {
-  onProcessFiles: (files: File[], texts: string[], base64s: string[]) => void;
+  onProcessFiles: (files: File[], receipts: ProcessedReceipt[], base64s: string[]) => void;
   isProcessing: boolean;
 }
 
@@ -64,7 +65,7 @@ export default function UploadReceiptPage({
 
   const handleGenerateResults = () => {
     const files = uploadedFiles.map((f) => f.file);
-    onProcessFiles(files, ocr.texts, ocr.base64s);
+    onProcessFiles(files, ocr.receipts, ocr.base64s);
   };
 
   return (
@@ -190,7 +191,7 @@ export default function UploadReceiptPage({
                 : "bg-[#99a1af] hover:bg-[#8a92a0] cursor-not-allowed"
             }`}
             style={{ boxShadow: "0px 1px 7px -5px rgba(0,0,0,0.25)" }}
-            disabled={uploadedFiles.length === 0 || isProcessing || ocr.texts.length !== uploadedFiles.length}
+            disabled={uploadedFiles.length === 0 || isProcessing || ocr.processingIds.size > 0}
             onClick={handleGenerateResults}
           >
             <img src="/sparks.svg" className="size-[18px]" />

@@ -43,24 +43,31 @@ export default function HomePage() {
     };
   };
 
-  const handleProcessFiles = async (files: File[], texts: string[], base64s: string[]) => {
+  const handleProcessFiles = async (files: File[], receipts: ProcessedReceipt[], base64s: string[]) => {
     setIsProcessing(true);
 
     try {
-      console.log('OCR texts:', texts);
+      console.log('OCR receipts:', receipts);
 
-      // For now, use mock processing
-      const results = await processReceiptImages(files);
+      // Use real receipts from OCR, but add missing fields
+      const enrichedReceipts = receipts.map((receipt, index) => ({
+        ...receipt,
+        id: receipt.id || Math.random().toString(36).substring(2, 11),
+        fileName: receipt.fileName || files[index]?.name || 'unknown',
+        thumbnail: receipt.thumbnail || `data:image/jpeg;base64,${base64s[index]}`,
+      }));
+
+      const breakdown = recalculateBreakdown(enrichedReceipts);
 
       // Store in localStorage
       localStorage.setItem('receipts', JSON.stringify({
         base64s,
-        texts,
-        processed: results
+        receipts: enrichedReceipts,
+        breakdown
       }));
 
-      setProcessedReceipts(results.receipts);
-      setSpendingBreakdown(results.breakdown);
+      setProcessedReceipts(enrichedReceipts);
+      setSpendingBreakdown(breakdown);
       setShowResults(true);
     } catch (error) {
       console.error("Processing failed:", error);

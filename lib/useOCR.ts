@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ProcessedReceipt } from './types';
 
 const readFileAsBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -15,13 +16,13 @@ const readFileAsBase64 = (file: File): Promise<string> => {
 
 export function useOCR() {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [texts, setTexts] = useState<string[]>([]);
+  const [receipts, setReceipts] = useState<ProcessedReceipt[]>([]);
   const [base64s, setBase64s] = useState<string[]>([]);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
   const processFiles = async (filesWithId: { file: File; id: string }[]) => {
     setIsProcessing(true);
-    setTexts([]);
+    setReceipts([]);
     setBase64s([]);
     setProcessingIds(new Set(filesWithId.map(f => f.id)));
 
@@ -42,14 +43,14 @@ export function useOCR() {
         const data = await response.json();
 
         if (response.ok) {
-          setTexts(prev => [...prev, data.text]);
+          setReceipts(prev => [...prev, ...data.receipts]);
         } else {
           console.error('Error:', data.error);
-          setTexts(prev => [...prev, 'Error extracting text']);
+          // For errors, maybe add a placeholder or skip
         }
       } catch (error) {
         console.error('Error processing file:', error);
-        setTexts(prev => [...prev, 'Error processing file']);
+        // Handle error
       }
 
       setProcessingIds(prev => {
@@ -62,5 +63,5 @@ export function useOCR() {
     setIsProcessing(false);
   };
 
-  return { processFiles, texts, base64s, isProcessing, processingIds };
+  return { processFiles, receipts, base64s, isProcessing, processingIds };
 }
