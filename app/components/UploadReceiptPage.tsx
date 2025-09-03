@@ -31,8 +31,11 @@ export default function UploadReceiptPage({
     onDrop,
     multiple: true,
     accept: {
-      'image/*': []
-    }
+      "image/png": [],
+      "image/jpeg": [],
+      "image/jpg": [],
+      "image/webp": [],
+    },
   });
 
   const handleFileUpload = (files: File[]) => {
@@ -48,8 +51,6 @@ export default function UploadReceiptPage({
   const removeFile = (id: string) => {
     setUploadedFiles((prev) => prev.filter((file) => file.id !== id));
   };
-
-
 
   const handleGenerateResults = () => {
     const files = uploadedFiles.map((f) => f.file);
@@ -101,14 +102,19 @@ export default function UploadReceiptPage({
                   </svg>
                 </div>
                 <p className="text-base text-[#101828] mb-2 text-center">
-                  {isDragActive ? "Drop the files here..." : "Drag and drop your receipts here"}
+                  {isDragActive
+                    ? "Drop the files here..."
+                    : "Drag and drop your receipts here"}
                 </p>
                 <p className="text-base text-[#6a7282] mb-6 text-center">
                   or click to select files
                 </p>
               </div>
             ) : uploadedFiles.length > 0 && !isProcessing ? (
-              <div className="flex flex-col justify-start items-start w-full p-[18px] gap-3 cursor-pointer" {...getRootProps()}>
+              <div
+                className="flex flex-col justify-start items-start w-full p-[18px] gap-3 cursor-pointer"
+                {...getRootProps()}
+              >
                 <input {...getInputProps()} />
                 {uploadedFiles.map((file) => (
                   <div
@@ -148,7 +154,9 @@ export default function UploadReceiptPage({
                   </div>
                 ))}
                 <p className="text-xs text-[#6a7282] text-center w-full">
-                  {isDragActive ? "Drop files here to add more..." : "Click or drag to add more receipts"}
+                  {isDragActive
+                    ? "Drop files here to add more..."
+                    : "Click or drag to add more receipts"}
                 </p>
               </div>
             ) : (
@@ -163,7 +171,7 @@ export default function UploadReceiptPage({
 
         <div className="text-center">
           <button
-            className={`flex justify-center items-center w-full md:w-[357px] mx-auto gap-2 px-[25px] py-2.5 rounded-md border border-[#d1d5dc] disabled:opacity-50 transition-colors ${
+            className={`flex justify-center items-center w-full md:w-[205px] mx-auto gap-2 px-[25px] py-2.5 rounded-md border border-[#d1d5dc] disabled:opacity-50 transition-colors ${
               uploadedFiles.length > 0
                 ? "bg-gray-900 hover:bg-gray-800 cursor-pointer"
                 : "bg-[#99a1af] hover:bg-[#8a92a0] cursor-not-allowed"
