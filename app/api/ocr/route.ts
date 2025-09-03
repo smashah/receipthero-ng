@@ -3,11 +3,11 @@ import { togetheraiClient } from "@/lib/client";
 
 export async function POST(request: Request) {
   try {
-    const { imageUrl } = await request.json();
+    const { base64Image } = await request.json();
 
-    if (!imageUrl || typeof imageUrl !== "string") {
+    if (!base64Image || typeof base64Image !== "string") {
       return NextResponse.json(
-        { error: "Missing required field: imageUrl" },
+        { error: "Missing required field: base64Image" },
         { status: 400 }
       );
     }
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            "You are an expert at extracting text from receipts. Extract the full text content with high fidelity.",
+            "You are an expert at extracting text from receipts. Extract the full text content with high fidelity. Respond only with the extracted text, without any additional comments, introductions, or explanations.",
         },
         {
           role: "user",
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
               type: "text",
               text: "Extract all visible text from this receipt.",
             },
-            { type: "image_url", image_url: { url: imageUrl } },
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
           ],
         },
       ],
