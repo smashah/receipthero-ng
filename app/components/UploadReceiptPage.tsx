@@ -3,7 +3,6 @@
 import type React from "react";
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { useOCR } from "@/lib/useOCR";
 import { ProcessedReceipt } from "@/lib/types";
 import Header from "./Header";
 import Footer from "./Footer";
@@ -12,6 +11,7 @@ interface UploadedFile {
   id: string;
   name: string;
   file: File;
+  isProcessing?: boolean;
 }
 
 interface UploadReceiptPageProps {
@@ -24,7 +24,6 @@ export default function UploadReceiptPage({
   isProcessing,
 }: UploadReceiptPageProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const ocr = useOCR();
 
   const onDrop = (acceptedFiles: File[]) => {
     handleFileUpload(acceptedFiles);
@@ -49,14 +48,10 @@ export default function UploadReceiptPage({
       id: Math.random().toString(36).slice(2, 11),
       name: file.name,
       file,
+      isProcessing: false,
     }));
 
     setUploadedFiles((prev) => [...prev, ...newFiles]);
-
-    // Process files immediately for OCR
-    if (newFiles.length > 0) {
-      ocr.processFiles(newFiles.map(f => ({ file: f.file, id: f.id })));
-    }
   };
 
   const removeFile = (id: string) => {
@@ -65,7 +60,8 @@ export default function UploadReceiptPage({
 
   const handleGenerateResults = () => {
     const files = uploadedFiles.map((f) => f.file);
-    onProcessFiles(files, ocr.receipts, ocr.base64s);
+    // Pass empty arrays for receipts and base64s since processing happens in the parent
+    onProcessFiles(files, [], []);
   };
 
   return (
@@ -131,7 +127,7 @@ export default function UploadReceiptPage({
                       <p className="text-xs text-[#364153] truncate">
                         {file.name}
                       </p>
-                      {ocr.processingIds.has(file.id) && (
+                      {file.isProcessing && (
                         <div className="animate-spin text-sm">🔄</div>
                       )}
                     </div>
@@ -191,7 +187,7 @@ export default function UploadReceiptPage({
                 : "bg-[#99a1af] hover:bg-[#8a92a0] cursor-not-allowed"
             }`}
             style={{ boxShadow: "0px 1px 7px -5px rgba(0,0,0,0.25)" }}
-            disabled={uploadedFiles.length === 0 || isProcessing || ocr.processingIds.size > 0}
+            disabled={uploadedFiles.length === 0 || isProcessing}
             onClick={handleGenerateResults}
           >
             <img src="/sparks.svg" className="size-[18px]" />
