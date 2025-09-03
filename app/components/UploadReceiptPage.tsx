@@ -62,7 +62,7 @@ export default function UploadReceiptPage({
       <Header />
 
       <main className="container mx-auto px-6 py-16 max-w-4xl">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <img
             src="/receipt-hero.svg"
             className="w-[77.58px] h-[71.29px] mx-auto"
@@ -85,21 +85,7 @@ export default function UploadReceiptPage({
               >
                 <input {...getInputProps()} />
                 <div className="w-[46px] h-[46px] mb-6 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg flex items-center justify-center">
-                  <svg
-                    width={24}
-                    height={24}
-                    viewBox="0 0 48 48"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-6 h-6"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M23.4921 14.8671C23.6268 14.7325 23.8095 14.6569 24 14.6569C24.1905 14.6569 24.3732 14.7325 24.5079 14.8671L28.8204 19.1796C28.9474 19.3158 29.0165 19.496 29.0132 19.6822C29.0099 19.8684 28.9345 20.0461 28.8028 20.1778C28.6711 20.3095 28.4935 20.3849 28.3073 20.3882C28.121 20.3915 27.9408 20.3224 27.8046 20.1954L24.7188 17.1096V28.3125C24.7188 28.5031 24.643 28.6859 24.5082 28.8207C24.3734 28.9555 24.1906 29.0312 24 29.0312C23.8094 29.0312 23.6266 28.9555 23.4918 28.8207C23.357 28.6859 23.2812 28.5031 23.2812 28.3125V17.1096L20.1954 20.1954C20.0592 20.3224 19.879 20.3915 19.6927 20.3882C19.5065 20.3849 19.3289 20.3095 19.1972 20.1778C19.0655 20.0461 18.9901 19.8684 18.9868 19.6822C18.9835 19.496 19.0526 19.3158 19.1796 19.1796L23.4921 14.8671ZM15.375 27.5937C15.5656 27.5937 15.7484 27.6695 15.8832 27.8042C16.018 27.939 16.0938 28.1219 16.0938 28.3125V30.4687C16.0938 30.85 16.2452 31.2156 16.5148 31.4852C16.7844 31.7548 17.15 31.9062 17.5312 31.9062H30.4688C30.85 31.9062 31.2156 31.7548 31.4852 31.4852C31.7548 31.2156 31.9062 30.85 31.9062 30.4687V28.3125C31.9062 28.1219 31.982 27.939 32.1168 27.8042C32.2516 27.6695 32.4344 27.5937 32.625 27.5937C32.8156 27.5937 32.9984 27.6695 33.1332 27.8042C33.268 27.939 33.3438 28.1219 33.3438 28.3125V30.4687C33.3438 31.2312 33.0408 31.9625 32.5017 32.5017C31.9625 33.0408 31.2312 33.3437 30.4688 33.3437H17.5312C16.7688 33.3437 16.0375 33.0408 15.4983 32.5017C14.9592 31.9625 14.6562 31.2312 14.6562 30.4687V28.3125C14.6562 28.1219 14.732 27.939 14.8668 27.8042C15.0016 27.6695 15.1844 27.5937 15.375 27.5937Z"
-                      fill="#1E2939"
-                    />
-                  </svg>
+                  <img src="/upload.svg" className="size-[24px]" alt="" />
                 </div>
                 <p className="text-base text-[#101828] mb-2 text-center">
                   {isDragActive
@@ -109,6 +95,14 @@ export default function UploadReceiptPage({
                 <p className="text-base text-[#6a7282] mb-6 text-center">
                   or click to select files
                 </p>
+                <div
+                  className="w-[120px] h-10 relative overflow-hidden rounded-md flex items-center justify-center bg-white border border-[#d1d5dc]"
+                  style={{ boxShadow: "0px 1px 7px -5px rgba(0,0,0,0.25)" }}
+                >
+                  <p className="text-base text-center text-[#364153]">
+                    Select Files
+                  </p>
+                </div>
               </div>
             ) : uploadedFiles.length > 0 && !isProcessing ? (
               <div
@@ -153,11 +147,19 @@ export default function UploadReceiptPage({
                     </button>
                   </div>
                 ))}
-                <p className="text-xs text-[#6a7282] text-center w-full">
-                  {isDragActive
-                    ? "Drop files here to add more..."
-                    : "Click or drag to add more receipts"}
-                </p>
+                <div
+                  className="self-stretch flex-grow-0 flex-shrink-0 h-[33px] relative overflow-hidden rounded-md bg-white border border-[#d1d5dc] cursor-pointer"
+                  style={{ boxShadow: "0px 1px 12px -7px rgba(0,0,0,0.25)" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // The dropzone will handle the file selection
+                  }}
+                >
+                  <p className="absolute left-[35px] top-[9px] text-xs text-left text-[#101828]">
+                    Upload more receipts
+                  </p>
+                  <img src="/upload.svg" className="size-[14px]" alt="" />
+                </div>
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center p-8">
