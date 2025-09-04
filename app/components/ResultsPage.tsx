@@ -3,10 +3,7 @@
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { Upload, Trash2, Star } from "lucide-react";
-import type {
-  ProcessedReceipt,
-  SpendingBreakdown,
-} from "@/lib/types";
+import type { ProcessedReceipt, SpendingBreakdown } from "@/lib/types";
 import { formatDisplayDate, toTitleCase } from "@/lib/utils";
 
 interface ResultsPageProps {
@@ -19,7 +16,10 @@ interface ResultsPageProps {
 }
 
 function calculateTotals(receipts: ProcessedReceipt[]) {
-  const totalSpending = receipts.reduce((sum, receipt) => sum + receipt.amount, 0);
+  const totalSpending = receipts.reduce(
+    (sum, receipt) => sum + receipt.amount,
+    0
+  );
   const totalReceipts = receipts.length;
   return { totalSpending, totalReceipts };
 }
@@ -38,19 +38,25 @@ export default function ResultsPage({
     <div className="min-h-screen bg-gray-100">
       <header className="flex items-center justify-between p-6 bg-white border-b border-[#d1d5dc]">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-[#101828] rounded flex items-center justify-center">
-              <span className="text-white text-xs font-bold">R</span>
-            </div>
-            <span className="text-lg font-semibold text-[#101828]">
-              Receipt Hero
-            </span>
+          <div className="flex items-center gap-3 justify-center">
+            <img src="/icon.svg" className="w-6 h-6" alt="Icon" />
+            <img
+              src="/logo.svg"
+              className="text-lg font-semibold text-[#101828]"
+              width="107"
+              height="20"
+              alt="Receipt Hero"
+            />
           </div>
         </div>
-        <div className="flex items-center gap-1.5 px-3.5 py-[7px] rounded bg-white/80 border-[0.7px] border-[#d1d5dc] shadow-sm">
+        <a
+          href="https://github.com/nutlope"
+          target="_blank"
+          className="flex items-center gap-1.5 px-3.5 py-[7px] rounded bg-white/80 border-[0.7px] border-[#d1d5dc] shadow-sm"
+        >
           <Star className="h-3.5 w-3.5 text-[#FFC107] fill-[#FFC107]" />
           <span className="text-sm text-[#1e2939]">Star on GitHub</span>
-        </div>
+        </a>
       </header>
 
       <div className="flex">
@@ -122,10 +128,10 @@ export default function ResultsPage({
                     <th className="text-left p-4 font-medium">Receipt</th>
                     <th className="text-left p-4 font-medium">Date</th>
                     <th className="text-left p-4 font-medium">Vendor</th>
-                     <th className="text-left p-4 font-medium">Category</th>
-                     <th className="text-left p-4 font-medium">
-                       Payment Method
-                     </th>
+                    <th className="text-left p-4 font-medium">Category</th>
+                    <th className="text-left p-4 font-medium">
+                      Payment Method
+                    </th>
                     <th className="text-left p-4 font-medium">Tax Amount</th>
                     <th className="text-left p-4 font-medium">Amount</th>
                     <th className="text-left p-4 font-medium">Actions</th>
@@ -141,10 +147,12 @@ export default function ResultsPage({
                           className="w-12 h-12 object-cover rounded border"
                         />
                       </td>
-                       <td className="p-4">{formatDisplayDate(receipt.date)}</td>
+                      <td className="p-4">{formatDisplayDate(receipt.date)}</td>
                       <td className="p-4">{receipt.vendor}</td>
-                       <td className="p-4">{toTitleCase(receipt.category)}</td>
-                       <td className="p-4">{toTitleCase(receipt.paymentMethod)}</td>
+                      <td className="p-4">{toTitleCase(receipt.category)}</td>
+                      <td className="p-4">
+                        {toTitleCase(receipt.paymentMethod)}
+                      </td>
                       <td className="p-4">${receipt.taxAmount}</td>
                       <td className="p-4 font-semibold">${receipt.amount}</td>
                       <td className="p-4">
