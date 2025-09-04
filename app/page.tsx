@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { ProcessedReceipt, UploadedFile } from "@/lib/types";
+import { UploadedFile } from "@/lib/types";
 import { useReceiptManager } from "@/lib/useReceiptManager";
 import UploadReceiptPage from "@/app/components/UploadReceiptPage";
 import ResultsPage from "@/app/components/ResultsPage";
@@ -18,6 +18,7 @@ export default function HomePage() {
     deleteReceipt,
     clearAll,
     selectFiles,
+    startProcessing,
   } = useReceiptManager();
 
   const handleProcessFiles = async (uploadedFiles: UploadedFile[]) => {
@@ -27,10 +28,13 @@ export default function HomePage() {
   const handleAddMoreReceipts = async () => {
     const files = await selectFiles();
     if (files.length > 0) {
+      // Start processing only after files are actually selected
+      startProcessing();
       // Process files first, then add receipts
       const processedFiles = await processFiles(files);
       await addReceipts(processedFiles);
     }
+    // If no files selected, don't start processing at all
   };
 
   const handleDeleteReceipt = (receiptId: string) => {

@@ -26,9 +26,10 @@ const readFileAsBase64 = (file: File): Promise<{ base64: string; mimeType: strin
 export function useReceiptManager() {
   const [receipts, setReceipts] = useState<ProcessedReceipt[]>([]);
   const [breakdown, setBreakdown] = useState<SpendingBreakdown | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+
+
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -191,6 +192,13 @@ export function useReceiptManager() {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
+  // Start processing state (for when user initiates file selection)
+  const startProcessing = useCallback(() => {
+    setIsProcessing(true);
+  }, []);
+
+
+
   // Get files from file input
   const selectFiles = useCallback((): Promise<File[]> => {
     return new Promise((resolve) => {
@@ -222,5 +230,6 @@ export function useReceiptManager() {
     deleteReceipt,
     clearAll,
     selectFiles,
+    startProcessing,
   };
 }
