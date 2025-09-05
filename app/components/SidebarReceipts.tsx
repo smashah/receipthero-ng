@@ -1,5 +1,6 @@
 "use client";
 
+import { GITHUB_LINK } from "@/lib/constant";
 import type { ProcessedReceipt, SpendingBreakdown } from "@/lib/types";
 
 interface SidebarReceiptsProps {
@@ -41,7 +42,7 @@ export default function SidebarReceipts({
           />
         </div>
         <a
-          href="https://github.com/nutlope"
+          href={GITHUB_LINK}
           target="_blank"
           className="flex items-center gap-1.5 px-3.5 py-[7px] rounded bg-white/80 border border-[#d1d5dc]"
           style={{ boxShadow: "0px 1px 7px -5px rgba(0,0,0,0.25)" }}
