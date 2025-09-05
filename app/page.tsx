@@ -5,24 +5,43 @@ import { UploadedFile } from "@/lib/types";
 import { useReceiptManager } from "@/lib/useReceiptManager";
 import UploadReceiptPage from "@/app/components/UploadReceiptPage";
 import ResultsPage from "@/app/components/ResultsPage";
+import { useToast } from "@/ui/toast";
 
 export default function HomePage() {
+  const { addToast } = useToast();
   const {
     receipts,
     breakdown,
     isProcessing,
     isLoaded,
     hasData,
-    processFiles,
     addReceipts,
-    deleteReceipt,
-    clearAll,
+    processFiles,
     selectFiles,
     startProcessing,
+    deleteReceipt,
+    clearAll,
   } = useReceiptManager();
 
   const handleProcessFiles = async (uploadedFiles: UploadedFile[]) => {
-    await addReceipts(uploadedFiles);
+    const result = await addReceipts(uploadedFiles);
+
+    // Show toast message for duplicates
+    if (result.duplicatesCount > 0) {
+      addToast(
+        `${result.duplicatesCount} duplicate receipt${result.duplicatesCount > 1 ? 's' : ''} ${result.duplicatesCount > 1 ? 'were' : 'was'} skipped`,
+        'warning'
+      );
+    }
+
+    // Show success message if new receipts were added
+    const newReceiptsCount = result.receipts.length - receipts.length;
+    if (newReceiptsCount > 0) {
+      addToast(
+        `Successfully added ${newReceiptsCount} new receipt${newReceiptsCount > 1 ? 's' : ''}!`,
+        'success'
+      );
+    }
   };
 
   const handleAddMoreReceipts = async () => {
@@ -32,7 +51,24 @@ export default function HomePage() {
       startProcessing();
       // Process files first, then add receipts
       const processedFiles = await processFiles(files);
-      await addReceipts(processedFiles);
+      const result = await addReceipts(processedFiles);
+
+      // Show toast message for duplicates
+      if (result.duplicatesCount > 0) {
+        addToast(
+          `${result.duplicatesCount} duplicate receipt${result.duplicatesCount > 1 ? 's' : ''} ${result.duplicatesCount > 1 ? 'were' : 'was'} skipped`,
+          'warning'
+        );
+      }
+
+      // Show success message if new receipts were added
+      const newReceiptsCount = result.receipts.length - receipts.length;
+      if (newReceiptsCount > 0) {
+        addToast(
+          `Successfully added ${newReceiptsCount} new receipt${newReceiptsCount > 1 ? 's' : ''}!`,
+          'success'
+        );
+      }
     }
     // If no files selected, don't start processing at all
   };

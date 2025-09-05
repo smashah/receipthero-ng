@@ -104,15 +104,41 @@ export default function UploadReceiptPage({
     },
   });
 
+  // Simple hash function for file content
+  const hashFileContent = (base64: string): string => {
+    let hash = 0;
+    for (let i = 0; i < base64.length; i++) {
+      const char = base64.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  };
+
   const handleFileUpload = async (files: File[]) => {
     const existingNames = new Set(uploadedFiles.map(f => f.name));
     const uniqueFiles = files.filter(file => !existingNames.has(file.name));
 
-    const newFiles: UploadedFile[] = uniqueFiles.map((file) => ({
-      id: Math.random().toString(36).slice(2, 11),
-      name: file.name,
-      file,
-      status: 'processing' as const,
+    const newFiles: UploadedFile[] = await Promise.all(uniqueFiles.map(async (file) => {
+      // Generate content-based ID from file content
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const fileId = hashFileContent(base64);
+
+      return {
+        id: fileId,
+        name: file.name,
+        file,
+        status: 'processing' as const,
+      };
     }));
 
     setUploadedFiles((prev) => [...prev, ...newFiles]);

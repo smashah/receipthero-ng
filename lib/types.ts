@@ -18,6 +18,19 @@ export const ProcessedReceiptSchema = z.object({
 // Type exports
 export type ProcessedReceipt = z.infer<typeof ProcessedReceiptSchema>;
 
+// Storage-optimized version without large base64 data
+export interface StoredReceipt {
+  id: string;
+  fileName: string;
+  date: string;
+  vendor: string;
+  category: string;
+  paymentMethod: string;
+  taxAmount: number;
+  amount: number;
+  mimeType: string;
+}
+
 // Status for uploaded files
 export type FileStatus = 'processing' | 'receipt' | 'not-receipt' | 'error';
 

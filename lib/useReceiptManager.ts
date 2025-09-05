@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ProcessedReceipt, SpendingBreakdown, UploadedFile, FileStatus } from './types';
+import { ProcessedReceipt, StoredReceipt, SpendingBreakdown, UploadedFile, FileStatus } from './types';
 import { normalizeDate } from './utils';
 
 interface StoredData {
-  receipts: ProcessedReceipt[];
+  receipts: StoredReceipt[];
   breakdown: SpendingBreakdown | null;
 }
 
@@ -34,6 +34,64 @@ const hashBase64 = (base64: string): string => {
   return Math.abs(hash).toString(36);
 };
 
+// Resize image to thumbnail size (335x403)
+const createThumbnail = (base64: string, maxWidth: number = 335, maxHeight: number = 403): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+
+      // Calculate new dimensions maintaining aspect ratio
+      let { width, height } = img;
+      if (width > height) {
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const thumbnailBase64 = canvas.toDataURL('image/jpeg', 0.8);
+      resolve(thumbnailBase64);
+    };
+    img.src = base64;
+  });
+};
+
+// Convert ProcessedReceipt to StoredReceipt (keep thumbnail, remove full base64)
+const toStoredReceipt = (receipt: ProcessedReceipt): StoredReceipt => ({
+  id: receipt.id,
+  fileName: receipt.fileName,
+  date: receipt.date,
+  vendor: receipt.vendor,
+  category: receipt.category,
+  paymentMethod: receipt.paymentMethod,
+  taxAmount: receipt.taxAmount,
+  amount: receipt.amount,
+  mimeType: receipt.mimeType,
+});
+
+// Convert StoredReceipt to ProcessedReceipt (load thumbnail from separate storage)
+const fromStoredReceipt = async (stored: StoredReceipt): Promise<ProcessedReceipt> => {
+  const thumbnailKey = `receipt-hero-thumbnail-${stored.id}`;
+  const thumbnail = localStorage.getItem(thumbnailKey) || '/placeholder.svg';
+
+  return {
+    ...stored,
+    thumbnail,
+    base64: '', // Keep empty since we don't store full images
+  };
+};
+
 export function useReceiptManager() {
   const [receipts, setReceipts] = useState<ProcessedReceipt[]>([]);
   const [breakdown, setBreakdown] = useState<SpendingBreakdown | null>(null);
@@ -44,24 +102,41 @@ export function useReceiptManager() {
 
   // Load data from localStorage on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const data: StoredData = JSON.parse(stored);
-        setReceipts(data.receipts || []);
-        setBreakdown(data.breakdown || null);
+    const loadData = async () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const data: StoredData = JSON.parse(stored);
+          const fullReceipts = await Promise.all(
+            (data.receipts || []).map(fromStoredReceipt)
+          );
+          setReceipts(fullReceipts);
+          setBreakdown(data.breakdown || null);
+        }
+      } catch (error) {
+        console.error('Failed to load data from localStorage:', error);
+      } finally {
+        setIsLoaded(true);
       }
-    } catch (error) {
-      console.error('Failed to load data from localStorage:', error);
-    } finally {
-      setIsLoaded(true);
-    }
+    };
+
+    loadData();
   }, []);
 
   // Save data to localStorage
-  const saveToStorage = useCallback((receipts: ProcessedReceipt[], breakdown: SpendingBreakdown | null) => {
+  const saveToStorage = useCallback(async (receipts: ProcessedReceipt[], breakdown: SpendingBreakdown | null) => {
     try {
-      const data: StoredData = { receipts, breakdown };
+      // Save thumbnails separately
+      for (const receipt of receipts) {
+        if (receipt.thumbnail && receipt.thumbnail !== '/placeholder.svg' && !receipt.thumbnail.startsWith('/')) {
+          const thumbnailKey = `receipt-hero-thumbnail-${receipt.id}`;
+          localStorage.setItem(thumbnailKey, receipt.thumbnail);
+        }
+      }
+
+      // Save metadata
+      const storedReceipts = receipts.map(toStoredReceipt);
+      const data: StoredData = { receipts: storedReceipts, breakdown };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.error('Failed to save data to localStorage:', error);
@@ -95,6 +170,7 @@ export function useReceiptManager() {
     const filePromises = files.map(async (file) => {
       try {
         const { base64, mimeType } = await readFileAsBase64(file);
+        const fileId = hashBase64(base64); // Use content-based ID
 
         const response = await fetch('/api/ocr', {
           method: 'POST',
@@ -107,18 +183,23 @@ export function useReceiptManager() {
         if (response.ok && data.receipts && data.receipts.length > 0) {
           const receipt = data.receipts[0]; // Take first receipt if multiple
           const receiptId = hashBase64(base64);
+
+          // Create thumbnail from the full image
+          const fullImageBase64 = `data:${mimeType};base64,${base64}`;
+          const thumbnail = await createThumbnail(fullImageBase64);
+
           const processedReceipt: ProcessedReceipt = {
             ...receipt,
             id: receiptId,
             fileName: receipt.fileName || file.name,
             date: normalizeDate(receipt.date), // Normalize date format
-            thumbnail: receipt.thumbnail || `data:${mimeType};base64,${base64}`,
-            base64,
+            thumbnail,
+            base64: '', // Don't store full image to save space
             mimeType,
           };
 
           return {
-            id: Math.random().toString(36).substring(2, 11),
+            id: fileId, // Use content-based ID
             name: file.name,
             file,
             status: 'receipt' as FileStatus,
@@ -129,7 +210,7 @@ export function useReceiptManager() {
         } else {
           // No receipt data found
           return {
-            id: Math.random().toString(36).substring(2, 11),
+            id: fileId, // Use content-based ID
             name: file.name,
             file,
             status: 'not-receipt' as FileStatus,
@@ -139,8 +220,10 @@ export function useReceiptManager() {
         }
       } catch (error) {
         console.error('Error processing file:', error);
+        const { base64 } = await readFileAsBase64(file);
+        const fileId = hashBase64(base64); // Use content-based ID
         return {
-          id: Math.random().toString(36).substring(2, 11),
+          id: fileId, // Use content-based ID
           name: file.name,
           file,
           status: 'error' as FileStatus,
@@ -161,25 +244,30 @@ export function useReceiptManager() {
 
     try {
       // Filter only files that are receipts
-      const newReceipts = uploadedFiles
+      const receiptFiles = uploadedFiles
         .filter(file => file.status === 'receipt' && file.receipt)
-        .map(file => file.receipt!)
-        // Deduplicate based on ID (hash of base64 content)
-        .filter(newReceipt => !receipts.some(existing => existing.id === newReceipt.id));
+        .map(file => file.receipt!);
+
+      // Deduplicate based on ID (hash of base64 content)
+      const newReceipts = receiptFiles.filter(newReceipt =>
+        !receipts.some(existing => existing.id === newReceipt.id)
+      );
+
+      const duplicatesCount = receiptFiles.length - newReceipts.length;
 
       if (newReceipts.length === 0) {
         // No new receipts to add
-        return { receipts, breakdown };
+        return { receipts, breakdown, duplicatesCount };
       }
 
-      const updatedReceipts = [...receipts, ...newReceipts];
-      const newBreakdown = calculateBreakdown(updatedReceipts);
+       const updatedReceipts = [...receipts, ...newReceipts];
+       const newBreakdown = calculateBreakdown(updatedReceipts);
 
-      setReceipts(updatedReceipts);
-      setBreakdown(newBreakdown);
-      saveToStorage(updatedReceipts, newBreakdown);
+       setReceipts(updatedReceipts);
+       setBreakdown(newBreakdown);
+       await saveToStorage(updatedReceipts, newBreakdown);
 
-      return { receipts: updatedReceipts, breakdown: newBreakdown };
+      return { receipts: updatedReceipts, breakdown: newBreakdown, duplicatesCount };
     } catch (error) {
       console.error('Failed to add receipts:', error);
       throw error;
@@ -189,18 +277,22 @@ export function useReceiptManager() {
   }, [receipts, breakdown, calculateBreakdown, saveToStorage]);
 
   // Delete a receipt
-  const deleteReceipt = useCallback((receiptId: string) => {
+  const deleteReceipt = useCallback(async (receiptId: string) => {
     const updatedReceipts = receipts.filter(receipt => receipt.id !== receiptId);
+
+    // Remove thumbnail from localStorage
+    const thumbnailKey = `receipt-hero-thumbnail-${receiptId}`;
+    localStorage.removeItem(thumbnailKey);
 
     if (updatedReceipts.length === 0) {
       setReceipts([]);
       setBreakdown(null);
-      saveToStorage([], null);
+      await saveToStorage([], null);
     } else {
       const newBreakdown = calculateBreakdown(updatedReceipts);
       setReceipts(updatedReceipts);
       setBreakdown(newBreakdown);
-      saveToStorage(updatedReceipts, newBreakdown);
+      await saveToStorage(updatedReceipts, newBreakdown);
     }
   }, [receipts, calculateBreakdown, saveToStorage]);
 
@@ -208,7 +300,17 @@ export function useReceiptManager() {
   const clearAll = useCallback(() => {
     setReceipts([]);
     setBreakdown(null);
+
+    // Remove main data
     localStorage.removeItem(STORAGE_KEY);
+
+    // Remove all thumbnails
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('receipt-hero-thumbnail-')) {
+        localStorage.removeItem(key);
+      }
+    });
   }, []);
 
   // Start processing state (for when user initiates file selection)
