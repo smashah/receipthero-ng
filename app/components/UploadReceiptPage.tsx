@@ -172,10 +172,10 @@ export default function UploadReceiptPage({
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
       <Header />
 
-      <main className="container mx-auto px-6 py-16 max-w-4xl">
+      <main className="container mx-auto px-6 py-16 max-w-4xl flex-grow">
         <div className="text-center mb-8 flex flex-col gap-4">
           <img
             src="/receipt-hero.svg"
@@ -191,12 +191,12 @@ export default function UploadReceiptPage({
         </div>
 
         <div
-          className={`w-full md:w-[361px] mx-auto mb-8 bg-white border border-[#d1d5dc] rounded-2xl shadow-sm ${
+          className={`w-full md:w-[650px] mx-auto mb-8 bg-white border border-[#d1d5dc] rounded-2xl shadow-sm ${
             uploadedFiles.length === 0 ? "h-[438px]" : "min-h-[438px]"
           }`}
         >
           <div
-            className={`w-fit md:w-[329px] m-4 bg-gray-50 border border-[#d1d5dc] border-dashed rounded-xl flex flex-col ${
+            className={`w-fit md:w-[618px] m-4 bg-gray-50 border border-[#d1d5dc] border-dashed rounded-xl flex flex-col ${
               uploadedFiles.length === 0 ? "h-[406px]" : "min-h-[406px]"
             }`}
           >
@@ -401,9 +401,9 @@ export default function UploadReceiptPage({
             </div>
           )}
         </div>
-
-        <Footer />
       </main>
+
+      <Footer />
     </div>
   );
 }

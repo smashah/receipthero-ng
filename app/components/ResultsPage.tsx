@@ -2,6 +2,7 @@
 
 import SidebarReceipts from "./SidebarReceipts";
 import TableReceipts from "./TableReceipts";
+import Footer from "./Footer";
 import type { ProcessedReceipt, SpendingBreakdown } from "@/lib/types";
 
 interface ResultsPageProps {
@@ -22,8 +23,8 @@ export default function ResultsPage({
   isProcessing,
 }: ResultsPageProps) {
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="flex flex-col md:flex-row">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      <div className="flex flex-col md:flex-row flex-grow">
         <SidebarReceipts
           processedReceipts={processedReceipts}
           spendingBreakdown={spendingBreakdown}
@@ -36,6 +37,8 @@ export default function ResultsPage({
           onStartOver={onStartOver}
         />
       </div>
+
+      <Footer />
     </div>
   );
 }
