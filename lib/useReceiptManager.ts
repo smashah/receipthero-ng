@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ProcessedReceipt, StoredReceipt, SpendingBreakdown, UploadedFile, FileStatus } from './types';
 import { normalizeDate } from './utils';
 import { getMultipleUSDConversionRates } from './currency';
+import { useToast } from '@/ui/toast';
 
 interface StoredData {
   receipts: StoredReceipt[];
@@ -106,6 +107,7 @@ export function useReceiptManager() {
   const [breakdown, setBreakdown] = useState<SpendingBreakdown | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const { addToast } = useToast();
 
 
 
@@ -189,6 +191,20 @@ export function useReceiptManager() {
         });
 
         const data = await response.json();
+
+        // Handle rate limit error specifically
+        if (response.status === 429) {
+          addToast(data.details || "You've reached the daily limit of 40 receipts. Contact @nutlope on X/Twitter for higher limits.", 'warning', 10000); // Show for 10 seconds
+          return {
+            id: fileId,
+            name: file.name,
+            file,
+            status: 'error' as FileStatus,
+            error: 'Rate limit exceeded',
+            base64,
+            mimeType,
+          };
+        }
 
         if (response.ok && data.receipts && data.receipts.length > 0) {
           const receipt = data.receipts[0]; // Take first receipt if multiple

@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import { togetheraiClient } from "@/lib/client";
 import { z } from "zod";
 import { ProcessedReceiptSchema } from "@/lib/types";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
+
+const ratelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(40, "1 d"),
+  analytics: true,
+});
 
 export async function POST(request: Request) {
   try {
@@ -11,6 +24,24 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Missing required field: base64Image" },
         { status: 400 }
+      );
+    }
+
+    // Rate limiting: 40 receipts per day per IP
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0] ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const { success } = await ratelimit.limit(ip);
+
+    if (!success) {
+      return NextResponse.json(
+        {
+          error: "Rate limit exceeded",
+          details:
+            "You've reached the daily limit of 40 receipts. Contact @nutlope on X/Twitter for higher limits.",
+        },
+        { status: 429 }
       );
     }
 
