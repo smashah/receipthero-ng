@@ -5,16 +5,24 @@ import { ProcessedReceiptSchema } from '@/lib/types';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+const hasUpstash =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
-const ratelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(30, '1 d'),
-  analytics: true,
-});
+const redis = hasUpstash
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    })
+  : null;
+
+const ratelimit =
+  hasUpstash && redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(30, '1 d'),
+        analytics: true,
+      })
+    : null;
 
 export async function POST(request: Request) {
   try {
@@ -27,22 +35,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Rate limiting: 30 receipts per day per IP
-    const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0] ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
-    const { success } = await ratelimit.limit(ip);
+    if (ratelimit) {
+      // Rate limiting: 30 receipts per day per IP
+      const ip =
+        request.headers.get('x-forwarded-for')?.split(',')[0] ||
+        request.headers.get('x-real-ip') ||
+        'unknown';
+      const { success } = await ratelimit.limit(ip);
 
-    if (!success) {
-      return NextResponse.json(
-        {
-          error: 'Rate limit exceeded',
-          details:
-            "You've reached the daily limit of 30 receipts. Contact @nutlope on X/Twitter for higher limits.",
-        },
-        { status: 429 }
-      );
+      if (!success) {
+        return NextResponse.json(
+          {
+            error: 'Rate limit exceeded',
+            details:
+              "You've reached the daily limit of 30 receipts. Contact @nutlope on X/Twitter for higher limits.",
+          },
+          { status: 429 }
+        );
+      }
     }
 
     const receiptSchema = z.object({
