@@ -1,0 +1,108 @@
+# ReceiptHero - Paperless-NGX Integration
+# 
+# This Docker Compose file sets up ReceiptHero as a background worker
+# that automatically processes receipts in your Paperless-NGX instance.
+#
+# Prerequisites:
+# 1. Together AI account and API key (https://api.together.xyz/)
+# 2. Paperless-NGX instance with API access
+# 3. API token from Paperless-NGX (Settings > API Tokens)
+#
+# Quick Start:
+# 1. Copy this file and update environment variables
+# 2. Run: docker-compose up -d
+# 3. Visit http://localhost:3000/setup to configure via UI
+#    OR set environment variables below
+#
+# The worker will poll Paperless-NGX every SCAN_INTERVAL for documents
+# tagged with RECEIPT_TAG and process them with AI-powered OCR.
+
+version: '3.8'
+
+services:
+  receipthero:
+    image: receipthero:latest
+    container_name: receipthero
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - receipthero_data:/app/data
+    environment:
+      # --- Paperless-NGX Configuration ---
+      # The full URL to your Paperless-NGX instance
+      - PAPERLESS_HOST=http://paperless:8000
+      # Your Paperless API Token (Settings > API Tokens)
+      - PAPERLESS_API_KEY=your-paperless-api-token-here
+      
+      # --- Together AI Configuration ---
+      # Your Together AI API Key (https://api.together.xyz/)
+      - TOGETHER_API_KEY=your-together-ai-api-key-here
+      
+      # --- Processing Configuration (Optional) ---
+      # How often to poll Paperless for new receipts (in milliseconds)
+      # Default: 300000 (5 minutes)
+      - SCAN_INTERVAL=300000
+      # Documents with this tag will be processed by ReceiptHero
+      # Default: "receipt"
+      - RECEIPT_TAG=receipt
+      # This tag is added after successful AI processing
+      # Default: "ai-processed"
+      - PROCESSED_TAG=ai-processed
+      # This tag is added if processing fails consistently
+      # Default: "ai-failed"
+      - FAILED_TAG=ai-failed
+      # Maximum number of retry attempts before marking as failed
+      # Default: 3
+      - MAX_RETRIES=3
+      
+      # --- Rate Limiting (Optional - for Upstash Redis) ---
+      # Use these if you want to enable global rate limiting for LLM calls
+      # - UPSTASH_REDIS_REST_URL=https://your-redis-url
+      # - UPSTASH_REDIS_REST_TOKEN=your-redis-token
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Uncomment to connect to Paperless-NGX network
+    # networks:
+    #   - paperless
+
+volumes:
+  receipthero_data:
+    driver: local
+    # This volume stores:
+    # - /app/data/config.json (configuration file)
+    # - /app/data/retry-queue.json (retry state)
+    # 
+    # Config file takes priority over environment variables.
+    # You can configure via:
+    # 1. Web UI at http://localhost:3000/setup
+    # 2. Environment variables (above)
+    # 3. Directly editing config.json in the volume
+
+# Example: Running alongside Paperless-NGX
+#
+# If you have Paperless-NGX in docker-compose, you can reference its network:
+#
+# services:
+#   receipthero:
+#     # ... (config above)
+#     environment:
+#       - PAPERLESS_HOST=http://paperless-webserver:8000
+#     networks:
+#       - paperless_network
+#
+# networks:
+#   paperless_network:
+#     external: true
+#     name: paperless-ngx_default  # Adjust to your Paperless network name
+
+# Uncomment if running alongside Paperless-NGX
+# networks:
+#   paperless:
+#     external: true

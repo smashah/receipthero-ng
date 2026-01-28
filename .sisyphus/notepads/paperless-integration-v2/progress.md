@@ -89,3 +89,31 @@
 - esbuild not bundled with Next.js 16 contrary to assumption
 - Required explicit devDependency addition
 - Using ESM format for modern Node.js compatibility
+
+## Task 12: Add docker-compose.yml example ✅
+
+**Status**: COMPLETE
+
+**Files Created:**
+- `docker-compose.yml` - Production-ready compose configuration
+
+**Implementation Details:**
+
+- **Standardized Configuration**:
+  - Uses `version: '3.8'` for broad compatibility
+  - Configured `receipthero` service with `restart: unless-stopped`
+  - Health check integrated with `/api/health` endpoint
+
+- **Persistence**:
+  - Defined `receipthero_data` named volume for `/app/data`
+  - Ensures configuration and retry queues persist across container restarts
+
+- **Documentation**:
+  - Extensive comments for all environment variables (required vs optional)
+  - Detailed instructions for API keys (Paperless-NGX, Together AI)
+  - Clear example for integration with existing Paperless networks
+
+**Verification**:
+- ✅ Syntax validated with `docker compose config`
+- ✅ Volume and port mappings verified
+- ✅ Health check configuration matches Task 8/11 implementation
