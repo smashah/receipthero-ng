@@ -108,6 +108,12 @@ export class PaperlessClient {
     return Buffer.from(arrayBuffer);
   }
 
+  async getDocumentThumbnail(id: number): Promise<Buffer> {
+    const res = await this.fetchApi(`/documents/${id}/thumb/`);
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
   async updateDocument(id: number, updates: {
     title?: string;
     created?: string;
