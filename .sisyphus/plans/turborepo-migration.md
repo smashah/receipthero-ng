@@ -416,7 +416,7 @@ Phase 3: Infrastructure (After frontend)
 
 ---
 
-- [ ] 6. Migrate OCR Service
+- [x] 6. Migrate OCR Service
 
   **What to do**:
   - Create `apps/api/src/services/ocr.ts`
