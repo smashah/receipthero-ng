@@ -67,13 +67,24 @@ export class PaperlessClient {
     return postData.id;
   }
 
-  async getUnprocessedDocuments(tagName: string = this.config.processedTagName) {
-    // First, find the tag ID
+  async getUnprocessedDocuments(
+    processedTagName: string = this.config.processedTagName,
+    receiptTagName: string = "receipt"
+  ) {
+    // First, find the tag IDs
     const tags = await this.getTags();
-    const tag = tags.find((t: any) => t.name.toLowerCase() === tagName.toLowerCase());
+    const processedTag = tags.find((t: any) => t.name.toLowerCase() === processedTagName.toLowerCase());
+    const receiptTag = tags.find((t: any) => t.name.toLowerCase() === receiptTagName.toLowerCase());
     
-    // Search for documents that DON'T have this tag
-    const query = tag ? `?tags__id__none=${tag.id}` : "";
+    // Search for documents that HAVE the receipt tag AND DON'T have the processed tag
+    let queryParts: string[] = [];
+    if (receiptTag) {
+      queryParts.push(`tags__id__all=${receiptTag.id}`);
+    }
+    if (processedTag) {
+      queryParts.push(`tags__id__none=${processedTag.id}`);
+    }
+    const query = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
     
     let allDocs: any[] = [];
     let nextUrl: string | null = `/documents/${query}`;

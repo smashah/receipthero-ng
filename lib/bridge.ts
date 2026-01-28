@@ -68,8 +68,9 @@ export async function runAutomation() {
 
   const client = new PaperlessClient({ host, apiKey, processedTagName: "ai-processed" });
   
-  const unprocessed = await client.getUnprocessedDocuments();
-  console.log(`Found ${unprocessed.length} unprocessed documents`);
+  const receiptTag = process.env.RECEIPT_TAG || "receipt";
+  const unprocessed = await client.getUnprocessedDocuments(undefined, receiptTag);
+  console.log(`Found ${unprocessed.length} unprocessed documents with tag "${receiptTag}"`);
   
   for (const doc of unprocessed) {
     try {
