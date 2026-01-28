@@ -283,7 +283,7 @@ Phase 3: Infrastructure (After frontend)
 
 ---
 
-- [ ] 3. Set Up Drizzle ORM with SQLite
+- [x] 3. Set Up Drizzle ORM with SQLite
 
   **What to do**:
   - Create `apps/api/src/db/` directory
