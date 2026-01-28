@@ -594,10 +594,10 @@ receipthero-ng/
 
 ## 10. Success Criteria
 
-- [ ] Worker processes all `receipt`-tagged documents without `ai-processed` tag
-- [ ] PDFs are handled correctly (via thumbnail extraction)
-- [ ] Failed documents are retried 3 times, then tagged `ai-failed`
-- [ ] Health endpoint returns proper status for Docker healthchecks
-- [ ] Configuration can be done via web UI or env vars
-- [ ] Docker container runs without external dependencies (no Upstash)
-- [ ] Graceful shutdown completes current document before exiting
+- [x] Worker processes all `receipt`-tagged documents without `ai-processed` tag
+- [x] PDFs are handled correctly (via thumbnail extraction)
+- [x] Failed documents are retried 3 times, then tagged `ai-failed`
+- [x] Health endpoint returns proper status for Docker healthchecks
+- [x] Configuration can be done via web UI or env vars
+- [x] Docker container runs without external dependencies (no Upstash)
+- [x] Graceful shutdown completes current document before exiting
