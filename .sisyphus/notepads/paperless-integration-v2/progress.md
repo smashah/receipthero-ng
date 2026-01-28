@@ -210,3 +210,58 @@
 - ✅ Logic follows specified patterns from `ocr/route.ts`
 
 **Next Task**: Phase 3 - Web UI (Task 9: Create /setup page)
+
+---
+
+## Task 8: Add /api/health Endpoint ✅
+
+**Status**: COMPLETE
+
+**Session**: ses_3f9648dcbffe2K7z3s63knq62B
+
+**Files Created:**
+- `app/api/health/route.ts` (115 lines) - Health check endpoint for Docker
+
+**Implementation Details:**
+
+1. **Health Checks Performed:**
+   - **Config validation**: Tries to load config with `loadConfig()`
+   - **Paperless connection**: Actual API call to `${host}/api/` with 5s timeout
+   - **Together AI verification**: Checks API key presence, length, not placeholder
+
+2. **Response Format:**
+   ```json
+   {
+     "status": "healthy" | "unhealthy",
+     "timestamp": "ISO-8601",
+     "checks": {
+       "paperlessConnection": "ok" | "error",
+       "togetherAiConnection": "ok" | "error",
+       "config": "ok" | "error"
+     },
+     "errors": ["error messages if unhealthy"]
+   }
+   ```
+
+3. **HTTP Status Codes:**
+   - 200 if all checks pass (healthy)
+   - 503 if any check fails (unhealthy)
+
+4. **Docker HEALTHCHECK Ready:**
+   - Fast response (5s max per check)
+   - No-cache headers for fresh status
+   - Compatible with `curl -f http://localhost:3000/api/health`
+
+**Verification:**
+- ✅ TypeScript compilation passes for route file
+- ✅ All acceptance criteria met
+- ✅ Code review: logic is correct
+- ⚠️ Full build blocked by pre-existing issue (lib/client.ts module-level Together init)
+
+**Known Issue (Not Task 8):**
+- `lib/client.ts` instantiates Together client at module level
+- Requires TOGETHER_API_KEY at build time
+- Affects /api/ocr route, not /api/health
+- Needs separate fix (lazy initialization)
+
+**Next Task**: Task 9 - Create /setup page

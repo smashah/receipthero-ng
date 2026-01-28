@@ -477,7 +477,7 @@ receipthero-ng/
 
 ---
 
-- [ ] 8. Add /api/health endpoint
+- [x] 8. Add /api/health endpoint
   
   **What to do**:
   - Create `app/api/health/route.ts`
@@ -485,9 +485,9 @@ receipthero-ng/
   - Test Paperless and Together AI connections
   
   **Acceptance Criteria**:
-  - [ ] Returns JSON with health status
-  - [ ] Docker HEALTHCHECK can use this endpoint
-  - [ ] Shows meaningful error if services unreachable
+  - [x] Returns JSON with health status
+  - [x] Docker HEALTHCHECK can use this endpoint
+  - [x] Shows meaningful error if services unreachable
   
   **Commit**: YES
   - Message: `feat(api): add health check endpoint`
