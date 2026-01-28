@@ -543,7 +543,7 @@ Phase 3: Infrastructure (After frontend)
 
 ---
 
-- [ ] 9. Integrate Background Worker
+- [x] 9. Integrate Background Worker
 
   **What to do**:
   - Create `apps/api/src/worker.ts`
