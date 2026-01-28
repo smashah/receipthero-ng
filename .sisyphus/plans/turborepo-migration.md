@@ -586,7 +586,7 @@ Phase 3: Infrastructure (After frontend)
 
 ---
 
-- [ ] 10. Add API Tests
+- [x] 10. Add API Tests
 
   **What to do**:
   - Create `apps/api/src/__tests__/` directory
