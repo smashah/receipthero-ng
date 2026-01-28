@@ -377,7 +377,7 @@ Phase 3: Infrastructure (After frontend)
 
 ---
 
-- [ ] 5. Migrate PaperlessClient
+- [x] 5. Migrate PaperlessClient
 
   **What to do**:
   - Create `apps/api/src/services/paperless.ts`
