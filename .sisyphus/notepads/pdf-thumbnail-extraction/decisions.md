@@ -1,0 +1,1 @@
+- Decided to use a try-catch block for thumbnail fetching to handle 404s or other errors gracefully, falling back to the original document file.

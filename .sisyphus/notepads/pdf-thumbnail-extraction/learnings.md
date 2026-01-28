@@ -1,0 +1,4 @@
+- Successfully added PDF thumbnail extraction support to Paperless client.
+- Preferring thumbnails over raw PDFs for OCR processing to improve compatibility with vision models.
+- Implemented fallback logic in bridge.ts to ensure robustness if thumbnails are missing.
+- Paperless API thumb endpoint: /api/documents/{id}/thumb/

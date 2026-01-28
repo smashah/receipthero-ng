@@ -497,7 +497,7 @@ receipthero-ng/
 
 ### Phase 3: Web UI
 
-- [ ] 9. Create /setup page for initial configuration
+- [x] 9. Create /setup page for initial configuration
   
   **What to do**:
   - Create `app/setup/page.tsx`
@@ -506,9 +506,9 @@ receipthero-ng/
   - Save to `config.json`
   
   **Acceptance Criteria**:
-  - [ ] Setup page accessible at /setup
-  - [ ] Can test connections before saving
-  - [ ] Saves to /app/data/config.json
+  - [x] Setup page accessible at /setup
+  - [x] Can test connections before saving
+  - [x] Saves to /app/data/config.json
   
   **Commit**: YES
   - Message: `feat(ui): add setup wizard page`
