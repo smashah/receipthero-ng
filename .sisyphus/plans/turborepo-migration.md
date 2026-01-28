@@ -493,7 +493,7 @@ Phase 3: Infrastructure (After frontend)
 
 ---
 
-- [ ] 8. Implement Hono API Routes
+- [x] 8. Implement Hono API Routes
 
   **What to do**:
   - Create `apps/api/src/routes/health.ts` - health check endpoint

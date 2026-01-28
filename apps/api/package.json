@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
-    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts & bun run --watch src/worker.ts",
+    "start": "bun run src/index.ts & bun run src/worker.ts",
     "test": "bun test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
