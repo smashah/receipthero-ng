@@ -1,123 +1,339 @@
 "use client";
 
-import type React from "react";
-import { UploadedFile } from "@/lib/types";
-import { useReceiptManager } from "@/lib/useReceiptManager";
-import UploadReceiptPage from "@/components/UploadReceiptPage";
-import ResultsPage from "@/components/ResultsPage";
-import { useToast } from "@/ui/toast";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { 
+  Activity, 
+  Settings, 
+  CheckCircle, 
+  XCircle, 
+  RefreshCw, 
+  AlertTriangle, 
+  Server, 
+  FileText 
+} from "lucide-react";
+import { Button } from "@/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/ui/card";
+import { cn } from "@/lib/utils";
 
-export default function HomePage() {
-  const { addToast } = useToast();
-  const {
-    receipts,
-    breakdown,
-    isProcessing,
-    isLoaded,
-    hasData,
-    addReceipts,
-    processFiles,
-    selectFiles,
-    startProcessing,
-    deleteReceipt,
-    clearAll,
-  } = useReceiptManager();
+// Types
+interface HealthStatus {
+  status: "healthy" | "unhealthy";
+  timestamp: string;
+  checks: {
+    paperlessConnection: "ok" | "error";
+    togetherAiConnection: "ok" | "error";
+    config: "ok" | "error";
+  };
+  errors?: string[];
+}
 
-  const handleProcessFiles = async (uploadedFiles: UploadedFile[]) => {
-    const result = await addReceipts(uploadedFiles);
+interface Config {
+  paperless: { host: string };
+  togetherAi: { apiKey: string };
+  processing: {
+    scanInterval: number;
+    receiptTag: string;
+    processedTag: string;
+    failedTag: string;
+    maxRetries: number;
+  };
+}
 
-    // Show toast message for duplicates
-    if (result.duplicatesCount > 0) {
-      addToast(
-        `${result.duplicatesCount} duplicate receipt${
-          result.duplicatesCount > 1 ? "s" : ""
-        } ${result.duplicatesCount > 1 ? "were" : "was"} skipped`,
-        "warning"
-      );
-    }
-
-    // Show success message if new receipts were added
-    const newReceiptsCount = result.receipts.length - receipts.length;
-    if (newReceiptsCount > 0) {
-      addToast(
-        `Successfully added ${newReceiptsCount} new receipt${
-          newReceiptsCount > 1 ? "s" : ""
-        }!`,
-        "success"
-      );
-    }
+// Inline Badge Component since it's not exported from @/ui
+function Badge({ 
+  children, 
+  variant = "default", 
+  className 
+}: { 
+  children: React.ReactNode; 
+  variant?: "default" | "success" | "destructive" | "warning" | "outline";
+  className?: string;
+}) {
+  const variants = {
+    default: "bg-primary text-primary-foreground hover:bg-primary/80",
+    success: "bg-green-500/15 text-green-700 hover:bg-green-500/25 border-green-200 border",
+    destructive: "bg-red-500/15 text-red-700 hover:bg-red-500/25 border-red-200 border",
+    warning: "bg-yellow-500/15 text-yellow-700 hover:bg-yellow-500/25 border-yellow-200 border",
+    outline: "text-foreground border border-input hover:bg-accent hover:text-accent-foreground",
   };
 
-  const handleAddMoreReceipts = async () => {
-    const files = await selectFiles();
-    if (files.length > 0) {
-      // Start processing only after files are actually selected
-      startProcessing();
-      // Process files first, then add receipts
-      const processedFiles = await processFiles(files);
-      const result = await addReceipts(processedFiles);
+  return (
+    <div className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2", variants[variant], className)}>
+      {children}
+    </div>
+  );
+}
 
-      // Show toast message for duplicates
-      if (result.duplicatesCount > 0) {
-        addToast(
-          `${result.duplicatesCount} duplicate receipt${
-            result.duplicatesCount > 1 ? "s" : ""
-          } ${result.duplicatesCount > 1 ? "were" : "was"} skipped`,
-          "warning"
-        );
+export default function DashboardPage() {
+  const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [config, setConfig] = useState<Config | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  const fetchData = async () => {
+    try {
+      // Fetch health
+      const healthRes = await fetch('/api/health');
+      if (healthRes.ok || healthRes.status === 503) {
+        const healthData = await healthRes.json();
+        setHealth(healthData);
       }
 
-      // Show success message if new receipts were added
-      const newReceiptsCount = result.receipts.length - receipts.length;
-      if (newReceiptsCount > 0) {
-        addToast(
-          `Successfully added ${newReceiptsCount} new receipt${
-            newReceiptsCount > 1 ? "s" : ""
-          }!`,
-          "success"
-        );
+      // Fetch config
+      const configRes = await fetch('/api/config');
+      if (configRes.ok) {
+        const configData = await configRes.json();
+        setConfig(configData);
       }
+    } catch (error) {
+      console.error("Failed to fetch dashboard data", error);
+    } finally {
+      setLoading(false);
+      setLastRefresh(new Date());
     }
-    // If no files selected, don't start processing at all
   };
 
-  const handleDeleteReceipt = (receiptId: string) => {
-    deleteReceipt(receiptId);
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000); // 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatTime = (date: Date) => {
+    return new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric'
+    }).format(date);
   };
 
-  const handleStartOver = () => {
-    clearAll();
-  };
+  const isConfigured = health?.checks.config === "ok";
 
-  // Show loading state while data is being loaded from localStorage
-  if (!isLoaded) {
+  if (loading && !health) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your receipts...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <div className="text-center space-y-4">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground">Loading system status...</p>
         </div>
       </div>
     );
   }
 
-  if (hasData && breakdown) {
-    return (
-      <ResultsPage
-        processedReceipts={receipts}
-        spendingBreakdown={breakdown}
-        onAddMoreReceipts={handleAddMoreReceipts}
-        onDeleteReceipt={handleDeleteReceipt}
-        onStartOver={handleStartOver}
-        isProcessing={isProcessing}
-      />
-    );
-  }
-
   return (
-    <UploadReceiptPage
-      onProcessFiles={handleProcessFiles}
-      processFiles={processFiles}
-    />
+    <div className="min-h-screen bg-gray-50/50 p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">ReceiptHero Dashboard</h1>
+            <p className="text-muted-foreground">Paperless-NGX Integration & Worker Status</p>
+          </div>
+          <div className="flex items-center gap-2">
+             <span className="text-sm text-muted-foreground hidden md:inline-block">
+               Last updated: {formatTime(lastRefresh)}
+             </span>
+             <Button variant="outline" size="sm" onClick={fetchData}>
+               <RefreshCw className="h-4 w-4 mr-2" />
+               Refresh
+             </Button>
+             <Link href="/setup">
+               <Button>
+                 <Settings className="h-4 w-4 mr-2" />
+                 Configure
+               </Button>
+             </Link>
+          </div>
+        </div>
+
+        {/* Status Overview Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">System Health</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold capitalize flex items-center gap-2">
+                {health?.status === "healthy" ? (
+                  <span className="text-green-600">Healthy</span>
+                ) : (
+                  <span className="text-red-600">Unhealthy</span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {health?.errors ? `${health.errors.length} active issues` : "All systems operational"}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Paperless Connection</CardTitle>
+              <Server className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                 {health?.checks.paperlessConnection === "ok" ? (
+                    <span className="text-green-600 flex items-center gap-2"><CheckCircle className="h-5 w-5"/> Connected</span>
+                 ) : (
+                    <span className="text-red-600 flex items-center gap-2"><XCircle className="h-5 w-5"/> Disconnected</span>
+                 )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Host: {config?.paperless.host || "Not configured"}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Processing Config</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {isConfigured ? (
+                    <span className="text-green-600 flex items-center gap-2"><CheckCircle className="h-5 w-5"/> Active</span>
+                 ) : (
+                    <span className="text-yellow-600 flex items-center gap-2"><AlertTriangle className="h-5 w-5"/> Missing</span>
+                 )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Scan Interval: {config?.processing.scanInterval ? `${config.processing.scanInterval / 1000}s` : "N/A"}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Detailed Status Section */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          
+          {/* Health Checks Detail */}
+          <Card className="col-span-4">
+            <CardHeader>
+              <CardTitle>Health Checks</CardTitle>
+              <CardDescription>
+                Diagnostic status of integration components
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium leading-none">Paperless-NGX API</p>
+                    <p className="text-sm text-muted-foreground">Connectivity to document management system</p>
+                  </div>
+                  <Badge variant={health?.checks.paperlessConnection === "ok" ? "success" : "destructive"}>
+                    {health?.checks.paperlessConnection === "ok" ? "Operational" : "Error"}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center justify-between border-b pb-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium leading-none">Together AI API</p>
+                    <p className="text-sm text-muted-foreground">LLM service for OCR processing</p>
+                  </div>
+                  <Badge variant={health?.checks.togetherAiConnection === "ok" ? "success" : "destructive"}>
+                    {health?.checks.togetherAiConnection === "ok" ? "Operational" : "Error"}
+                  </Badge>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium leading-none">Configuration</p>
+                    <p className="text-sm text-muted-foreground">Settings validation</p>
+                  </div>
+                  <Badge variant={health?.checks.config === "ok" ? "success" : "destructive"}>
+                    {health?.checks.config === "ok" ? "Valid" : "Invalid"}
+                  </Badge>
+                </div>
+              </div>
+
+              {health?.errors && health.errors.length > 0 && (
+                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
+                  <h4 className="text-sm font-semibold text-red-800 mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" /> Active Errors
+                  </h4>
+                  <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                    {health.errors.map((err, i) => (
+                      <li key={i}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Configuration Summary */}
+          <Card className="col-span-3">
+             <CardHeader>
+              <CardTitle>Current Configuration</CardTitle>
+              <CardDescription>
+                Active processing rules
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!config ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">Configuration not loaded</p>
+                  <Link href="/setup">
+                    <Button>Setup Integration</Button>
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground block mb-1">Source Tag</span>
+                      <div className="font-mono bg-muted p-1 rounded px-2">{config.processing.receiptTag}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block mb-1">Success Tag</span>
+                      <div className="font-mono bg-muted p-1 rounded px-2">{config.processing.processedTag}</div>
+                    </div>
+                  </div>
+                  <div className="text-sm">
+                     <span className="text-muted-foreground block mb-1">Failure Tag</span>
+                     <div className="font-mono bg-muted p-1 rounded px-2 w-1/2">{config.processing.failedTag}</div>
+                  </div>
+                  
+                  <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Max Retries</span>
+                      <span className="font-medium">{config.processing.maxRetries}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm mt-2">
+                      <span className="text-muted-foreground">Scan Interval</span>
+                      <span className="font-medium">{config.processing.scanInterval / 1000}s</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+            {config && (
+              <CardFooter>
+                <Link href="/setup" className="w-full">
+                  <Button variant="outline" className="w-full">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Edit Configuration
+                  </Button>
+                </Link>
+              </CardFooter>
+            )}
+          </Card>
+
+        </div>
+      </div>
+    </div>
   );
 }

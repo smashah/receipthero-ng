@@ -516,7 +516,7 @@ receipthero-ng/
 
 ---
 
-- [ ] 10. Create dashboard with processing status
+- [x] 10. Create dashboard with processing status
   
   **What to do**:
   - Modify `app/page.tsx` to show:
@@ -526,9 +526,9 @@ receipthero-ng/
     - Failed documents list
   
   **Acceptance Criteria**:
-  - [ ] Dashboard shows live worker status
-  - [ ] Can see recent processing history
-  - [ ] Can see failed documents
+  - [x] Dashboard shows live worker status
+  - [x] Can see recent processing history
+  - [x] Can see failed documents
   
   **Commit**: YES
   - Message: `feat(ui): add dashboard with processing status`
