@@ -36,3 +36,36 @@ receipthero-ng/
 - ✅ Git commit created: de50887
 - ✅ 252 files changed, clean migration
 
+
+## [2026-01-28 23:47] Task 1: Create @sm-rn/shared Package
+
+### Actions Taken
+- Created packages/shared/ directory structure
+- Migrated ProcessedReceiptSchema, types from _legacy/lib/types.ts (EXACT copy)
+- Migrated ConfigSchema from _legacy/lib/config.ts
+- Added NEW config fields per plan:
+  - rateLimit.enabled (boolean, default false)
+  - rateLimit.upstashUrl/upstashToken (optional strings)
+  - observability.heliconeEnabled (boolean, default false)
+  - observability.heliconeApiKey (optional string)
+- Created package.json with exports map (./types, ./schemas)
+- Created tsconfig.json
+- Installed dependencies (zod@4.3.6)
+
+### Verification
+- ✅ TypeScript compiles without errors
+- ✅ Exports map configured for JIT imports
+- ✅ All legacy schemas preserved exactly
+- ✅ New config fields added as required
+- ✅ Git commit: 660771c
+
+### Structure
+```
+packages/shared/
+├── package.json
+├── tsconfig.json
+└── src/
+    ├── types.ts       # ProcessedReceipt, StoredReceipt, UploadedFile, etc.
+    └── schemas.ts     # ConfigSchema with new fields
+```
+
