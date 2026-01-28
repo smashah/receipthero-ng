@@ -452,7 +452,7 @@ Phase 3: Infrastructure (After frontend)
 
 ---
 
-- [ ] 7. Migrate Bridge and RetryQueue
+- [x] 7. Migrate Bridge and RetryQueue
 
   **What to do**:
   - Create `apps/api/src/services/retry-queue.ts`
