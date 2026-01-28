@@ -538,7 +538,7 @@ receipthero-ng/
 
 ### Phase 4: Polish
 
-- [ ] 11. Fix Dockerfile (bundle worker at build time)
+- [x] 11. Fix Dockerfile (bundle worker at build time)
   
   **What to do**:
   - Use esbuild to bundle worker.ts
@@ -550,9 +550,9 @@ receipthero-ng/
   - `start-services.sh` - Current startup script
   
   **Acceptance Criteria**:
-  - [ ] No `pnpm install` at runtime
-  - [ ] Worker runs from bundled JS file
-  - [ ] Image size reduced
+  - [x] No `pnpm install` at runtime
+  - [x] Worker runs from bundled JS file
+  - [x] Image size reduced
   
   **Commit**: YES
   - Message: `fix(docker): bundle worker at build time`

@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "worker": "tsx scripts/worker.ts",
+    "bundle:worker": "esbuild scripts/worker.ts --bundle --platform=node --format=esm --outfile=dist/worker.js --external:next"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -30,7 +32,9 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.24.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "tw-animate-css": "^1.3.8",
     "typescript": "^5"
   }
