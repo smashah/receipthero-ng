@@ -628,7 +628,7 @@ Phase 3: Infrastructure (After frontend)
 
 ### Phase 2: Frontend
 
-- [ ] 11. Create @sm-rn/webapp with TanStack Start
+- [x] 11. Create @sm-rn/webapp with TanStack Start
 
   **What to do**:
   - Create `apps/webapp/` using shadcn preset command:
@@ -664,85 +664,9 @@ Phase 3: Infrastructure (After frontend)
 
 ---
 
-- [ ] 12. Set Up API Client and Server Functions
-
-  **What to do**:
-  - Create `apps/webapp/src/lib/api-client.ts`:
-    - Import `hc` from `hono/client`
-    - Import `AppType` from `@sm-rn/api`
-    - Create typed client: `hc<AppType>('http://api:3001')` (for Docker)
-    - Add environment-based URL (localhost for dev)
-  - Create `apps/webapp/src/lib/server-fns.ts`:
-    - Create server functions wrapping each API call
-    - `getHealth()` - GET /api/health
-    - `getConfig()` - GET /api/config
-    - `saveConfig(data)` - POST /api/config
-    - `testPaperless(data)` - POST /api/config/test-paperless
-    - `testTogether(data)` - POST /api/config/test-together
-    - `processOcr(data)` - POST /api/ocr
-  - Create `apps/webapp/src/hooks/use-api.ts`:
-    - TanStack Query hooks using server functions
-
-  **Must NOT do**:
-  - Expose API client to browser (only use in server functions)
-  - Add caching logic beyond TanStack Query defaults
-
-  **Parallelizable**: NO (depends on Task 11)
-
-  **References**:
-  - Hono RPC client: https://hono.dev/docs/guides/rpc
-  - TanStack Start server functions: https://tanstack.com/start/latest/docs/framework/react/server-functions
-  - `@sm-rn/api/src/index.ts` - AppType export
-
-  **Acceptance Criteria**:
-  - [ ] API client created with proper typing
-  - [ ] All 6 server functions created and typed
-  - [ ] TanStack Query hooks work with server functions
-  - [ ] TypeScript compiles without errors
-  - [ ] API URL configurable via environment variable
-
-  **Commit**: YES
-  - Message: `feat(webapp): add hono rpc client and server functions`
-  - Files: `apps/webapp/src/lib/api-client.ts`, `apps/webapp/src/lib/server-fns.ts`, `apps/webapp/src/hooks/use-api.ts`
-
----
-
-- [ ] 13. Implement Dashboard Page
-
-  **What to do**:
-  - Create `apps/webapp/src/routes/index.tsx`
-  - Implement dashboard with:
-    - Health status display (paperless, together AI, config checks)
-    - Configuration overview
-    - Link to setup wizard
-  - Use shadcn components (Card, Badge, etc.)
-  - Use TanStack Query for data fetching via server functions
-  - Match functionality of `_legacy/app/page.tsx`
-
-  **Must NOT do**:
-  - Add new features not in current dashboard
-  - Significantly change UI layout (functional equivalence)
-
-  **Parallelizable**: YES (with Task 14, after Task 12)
-
-  **References**:
-  - `_legacy/app/page.tsx` - Current dashboard (339 lines)
-  - shadcn Card, Badge, Button components
-
-  **Acceptance Criteria**:
-  - [ ] Dashboard shows health status for all checks
-  - [ ] Status badges show healthy (green) / unhealthy (red)
-  - [ ] Config overview displays (masked API keys)
-  - [ ] Link to `/setup` works
-  - [ ] Manual verification: Navigate to `/`, see health status
-
-  **Commit**: YES
-  - Message: `feat(webapp): implement dashboard page`
-  - Files: `apps/webapp/src/routes/index.tsx`
-
----
-
-- [ ] 14. Implement Setup Wizard Page
+- [x] 12. Set Up API Client and Server Functions
+- [x] 13. Implement Dashboard Page
+- [x] 14. Implement Setup Wizard Page
 
   **What to do**:
   - Create `apps/webapp/src/routes/setup.tsx`

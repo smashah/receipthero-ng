@@ -1,0 +1,10 @@
+.git
+.sisyphus
+_legacy
+node_modules
+*/node_modules
+bun.lock
+*.log
+dist
+.next
+.turbo
