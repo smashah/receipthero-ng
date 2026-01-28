@@ -181,3 +181,32 @@
 - ✅ State persistence (RetryQueue) is preserved because it auto-saves after every document processing step in `runAutomation()`
 
 **Next Task**: Task 8 - Add /api/health endpoint
+
+---
+
+## Task 8: Add /api/health endpoint ✅
+
+**Status**: COMPLETE
+
+**Files Created:**
+- `app/api/health/route.ts` - Health check API endpoint
+
+**Implementation Details:**
+- Created GET handler returning JSON health status
+- Implemented **Config Check**: Validates configuration loads correctly via `loadConfig()`
+- Implemented **Together AI Check**: Verifies API key is present, not a placeholder, and has minimum length
+- Implemented **Paperless Check**: Performs actual connection test to `${host}/api/` with API key
+- **Timeouts**: Added 5s timeout for Paperless connection to ensure fast response
+- **Status Codes**: 
+  - 200 OK if all checks pass
+  - 503 Service Unavailable if any check fails
+- **Docker Ready**: Designed to work with `curl -f` for Docker HEALTHCHECK
+- **Cache Control**: Added headers to prevent caching of health status
+
+**Verification:**
+- ✅ TypeScript compilation passes (`npx tsc --noEmit`)
+- ✅ Endpoint includes detailed error messages on failure
+- ✅ Responds quickly (well under 10s requirement)
+- ✅ Logic follows specified patterns from `ocr/route.ts`
+
+**Next Task**: Phase 3 - Web UI (Task 9: Create /setup page)
