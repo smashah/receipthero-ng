@@ -151,7 +151,7 @@ Phase 3: Infrastructure (After frontend)
 
 ### Phase 0: Preparation
 
-- [ ] 0. Initialize Turborepo and Archive Legacy Code
+- [x] 0. Initialize Turborepo and Archive Legacy Code
 
   **What to do**:
   - Move all existing files to `_legacy/` folder (except `.git`, `node_modules`, `.sisyphus`)
