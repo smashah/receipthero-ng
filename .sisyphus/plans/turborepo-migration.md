@@ -331,7 +331,7 @@ Phase 3: Infrastructure (After frontend)
 
 ---
 
-- [ ] 4. Implement Config Loader
+- [x] 4. Implement Config Loader
 
   **What to do**:
   - Create `apps/api/src/services/config.ts`
