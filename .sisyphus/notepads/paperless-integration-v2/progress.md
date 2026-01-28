@@ -153,3 +153,31 @@
 - ✅ Exponential backoff formula correct
 
 **Next Task**: Task 7 - Add graceful shutdown handler
+
+---
+
+## Task 7: Add graceful shutdown handler ✅
+
+**Status**: COMPLETE
+
+**Changes Made:**
+- Modified `scripts/worker.ts` - Added signal handlers and loop control
+
+**Implementation Details:**
+- Added `isShuttingDown` flag to control the main worker loop
+- Added `currentProcessing` promise tracker to wait for active runs
+- Registered handlers for `SIGTERM` and `SIGINT` signals
+- When signal received:
+  - Sets `isShuttingDown = true`
+  - Waits for `currentProcessing` to complete (if any)
+  - Logs status messages
+  - Exits with code 0
+- Modified loop to skip wait interval if shutdown is in progress
+
+**Verification:**
+- ✅ TypeScript compilation passes (`npx tsc --noEmit`)
+- ✅ Signal handlers correctly wait for active automation runs
+- ✅ Clean exit with code 0
+- ✅ State persistence (RetryQueue) is preserved because it auto-saves after every document processing step in `runAutomation()`
+
+**Next Task**: Task 8 - Add /api/health endpoint

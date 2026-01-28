@@ -457,7 +457,7 @@ receipthero-ng/
 
 ---
 
-- [ ] 7. Add graceful shutdown handler
+- [x] 7. Add graceful shutdown handler
   
   **What to do**:
   - Handle SIGTERM/SIGINT signals
@@ -468,8 +468,8 @@ receipthero-ng/
   - `scripts/worker.ts:8-17` - Current infinite loop
   
   **Acceptance Criteria**:
-  - [ ] Worker completes current document on SIGTERM
-  - [ ] No data loss on container restart
+  - [x] Worker completes current document on SIGTERM
+  - [x] No data loss on container restart
   
   **Commit**: YES
   - Message: `feat(worker): add graceful shutdown handling`
