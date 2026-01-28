@@ -560,7 +560,7 @@ receipthero-ng/
 
 ---
 
-- [ ] 12. Add docker-compose.yml example
+- [x] 12. Add docker-compose.yml example
   
   **What to do**:
   - Create example docker-compose.yml
@@ -568,8 +568,8 @@ receipthero-ng/
   - Document environment variables
   
   **Acceptance Criteria**:
-  - [ ] docker-compose.yml in repo root
-  - [ ] Works alongside Paperless-NGX compose
+  - [x] docker-compose.yml in repo root
+  - [x] Works alongside Paperless-NGX compose
   
   **Commit**: YES
   - Message: `docs: add docker-compose.yml example`

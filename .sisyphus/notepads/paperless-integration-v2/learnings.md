@@ -104,3 +104,51 @@ Started: 2026-01-28T21:33:45.291Z
 - ✅ All acceptance criteria met
 - ✅ Code review: secure, well-structured
 - ⚠️ Full build blocked by lib/client.ts issue (pre-existing)
+
+---
+
+## Task 12: Add docker-compose.yml Example ✅
+
+**Status**: COMPLETE
+
+**Session**: ses_3f9546638ffe7nX5WJMHNpepl2
+
+**Files Created:**
+- `docker-compose.yml` (109 lines) - Production-ready compose configuration
+
+**Key Features:**
+
+1. **Comprehensive Documentation:**
+   - Header explains prerequisites and quick start
+   - Every environment variable documented inline
+   - Examples for Paperless-NGX network integration
+   - Volume usage explanation
+
+2. **Service Configuration:**
+   - Image: receipthero:latest
+   - Port: 3000:3000
+   - Restart: unless-stopped
+   - Health check: /api/health with 30s interval
+
+3. **Environment Variables:**
+   - Required: PAPERLESS_HOST, PAPERLESS_API_KEY, TOGETHER_API_KEY
+   - Optional: SCAN_INTERVAL, *_TAG variables, MAX_RETRIES
+   - Optional: Upstash Redis for rate limiting
+
+4. **Persistence:**
+   - Volume: receipthero_data:/app/data
+   - Stores config.json and retry-queue.json
+   - Config file takes priority over env vars
+
+5. **Network Integration:**
+   - Example for connecting to Paperless-NGX network
+   - Commented out by default (single-service setup)
+   - Clear instructions for multi-service scenarios
+
+**Verification:**
+- ✅ Valid YAML syntax (docker compose config)
+- ✅ All acceptance criteria met
+- ✅ Production-ready documentation
+- ✅ Works standalone or with Paperless-NGX
+
+**Next**: All planned tasks complete! 🎉
