@@ -91,7 +91,8 @@ export type ProcessingEventType =
   | 'receipt:processing' 
   | 'receipt:success' 
   | 'receipt:failed' 
-  | 'receipt:retry';
+  | 'receipt:retry'
+  | 'receipt:skipped';
 
 export interface ProcessingEvent {
   type: ProcessingEventType;
@@ -103,7 +104,7 @@ export interface ProcessingEvent {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-export type LogSource = 'worker' | 'api' | 'core';
+export type LogSource = 'worker' | 'api' | 'core' | 'db' | 'config' | 'queue' | 'ws' | 'ocr' | 'paperless';
 
 export interface LogEntry {
   id?: number;
