@@ -1,8 +1,24 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 import appCss from '../styles.css?url'
+
+// Create a client outside component to avoid re-creation on renders
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Refetch on window focus for fresh data
+      refetchOnWindowFocus: true,
+      // Retry failed requests once
+      retry: 1,
+      // Consider data stale after 30 seconds
+      staleTime: 30_000,
+    },
+  },
+})
 
 export const Route = createRootRoute({
   head: () => ({
@@ -36,7 +52,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryClientProvider>
         <TanStackDevtools
           config={{
             position: 'bottom-right',
