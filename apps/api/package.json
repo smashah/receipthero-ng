@@ -13,17 +13,17 @@
   },
   "dependencies": {
     "@sm-rn/shared": "workspace:*",
-    "hono": "^4.7.11",
+    "hono": "catalog:",
     "@hono/zod-validator": "^0.4.2",
     "drizzle-orm": "^0.38.4",
-    "together-ai": "^0.22.0",
-    "zod": "^4.1.5",
-    "@upstash/ratelimit": "^2.0.6",
-    "@upstash/redis": "^1.35.3"
+    "together-ai": "catalog:",
+    "zod": "catalog:",
+    "@upstash/ratelimit": "catalog:",
+    "@upstash/redis": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
     "drizzle-kit": "^0.31.5",
-    "typescript": "^5"
+    "typescript": "catalog:"
   }
 }

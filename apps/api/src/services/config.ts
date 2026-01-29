@@ -1,8 +1,69 @@
 import { ConfigSchema, type Config } from '@sm-rn/shared/schemas';
 import * as fs from 'fs';
+import * as path from 'path';
 
 // Configuration file path
 export const CONFIG_PATH = process.env.CONFIG_PATH || '/app/data/config.json';
+
+/**
+ * Returns a default config template with placeholder values.
+ */
+function getDefaultConfigTemplate(): Record<string, unknown> {
+  return {
+    paperless: {
+      host: 'http://localhost:8000',
+      apiKey: 'YOUR_PAPERLESS_API_KEY',
+    },
+    togetherAi: {
+      apiKey: 'YOUR_TOGETHER_AI_API_KEY',
+    },
+    processing: {
+      scanInterval: 60000,
+      receiptTag: 'receipt',
+      processedTag: 'processed',
+      failedTag: 'failed',
+      maxRetries: 3,
+    },
+    rateLimit: {
+      enabled: false,
+      upstashUrl: '',
+      upstashToken: '',
+    },
+    observability: {
+      heliconeEnabled: false,
+      heliconeApiKey: '',
+    },
+  };
+}
+
+/**
+ * Creates a default config file if it doesn't exist.
+ * Returns true if a new file was created, false if file already existed.
+ */
+function ensureConfigFileExists(): boolean {
+  if (fs.existsSync(CONFIG_PATH)) {
+    return false;
+  }
+
+  try {
+    // Ensure the directory exists
+    const configDir = path.dirname(CONFIG_PATH);
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+
+    // Write default config
+    const defaultConfig = getDefaultConfigTemplate();
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(defaultConfig, null, 2), 'utf-8');
+
+    console.log(`Created default config file at ${CONFIG_PATH}`);
+    console.log('Please update the placeholder values (especially API keys) before running again.');
+    return true;
+  } catch (error) {
+    console.warn(`Could not create default config file: ${error instanceof Error ? error.message : String(error)}`);
+    return false;
+  }
+}
 
 /**
  * Loads configuration from file and environment variables.
@@ -12,9 +73,14 @@ export const CONFIG_PATH = process.env.CONFIG_PATH || '/app/data/config.json';
  * 2. Environment variable values (if config file doesn't have the key)
  * 3. Default values (from Zod schema)
  * 
+ * If no config file exists, a default template will be created.
+ * 
  * @throws Error if required fields are missing or validation fails
  */
 export function loadConfig(): Config {
+  // Ensure config file exists (creates default if missing)
+  const wasCreated = ensureConfigFileExists();
+
   let fileConfig: Partial<Record<string, unknown>> = {};
 
   // Try to read config file
@@ -29,6 +95,16 @@ export function loadConfig(): Config {
     }
     // If file doesn't exist or can't be read, continue with env vars only
     console.warn(`Could not read config file: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  // If we just created a fresh config with placeholder values, let validation fail gracefully
+  if (wasCreated) {
+    throw new Error(
+      `A default config file was created at ${CONFIG_PATH}.\n` +
+      `Please update the placeholder API keys before running again:\n` +
+      `  - paperless.apiKey\n` +
+      `  - togetherAi.apiKey`
+    );
   }
 
   // Build configuration object from file + env vars
@@ -76,7 +152,7 @@ export function loadConfig(): Config {
 
   // Validate with Zod schema
   const result = ConfigSchema.safeParse(rawConfig);
-  
+
   if (!result.success) {
     const errors = result.error.issues
       .map((e) => `  - ${e.path.join('.')}: ${e.message}`)

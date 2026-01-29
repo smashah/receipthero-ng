@@ -1,0 +1,25 @@
+{
+    "paperless": {
+        "host": "http://localhost:8000",
+        "apiKey": "your-paperless-api-key"
+    },
+    "togetherAi": {
+        "apiKey": "your-together-ai-api-key"
+    },
+    "processing": {
+        "scanInterval": 60,
+        "receiptTag": "receipt",
+        "processedTag": "processed",
+        "failedTag": "failed",
+        "maxRetries": 3
+    },
+    "rateLimit": {
+        "enabled": false,
+        "upstashUrl": "",
+        "upstashToken": ""
+    },
+    "observability": {
+        "heliconeEnabled": false,
+        "heliconeApiKey": ""
+    }
+}

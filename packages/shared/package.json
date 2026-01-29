@@ -7,10 +7,10 @@
     "./schemas": "./src/schemas.ts"
   },
   "dependencies": {
-    "zod": "^4.1.5"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "typescript": "^5"
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
   }
 }
