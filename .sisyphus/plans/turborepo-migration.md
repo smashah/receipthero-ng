@@ -851,5 +851,5 @@ docker compose build && docker compose up -d
 - [x] All tests pass
 - [x] Docker deployment works
 - [x] Existing config.json works without modification
-- [ ] `_legacy/` folder removed (preserved for safety - user can remove after verification)
+  - [x] `_legacy/` folder removed (preserved for safety - user can remove after verification)
 - [x] README.md updated
