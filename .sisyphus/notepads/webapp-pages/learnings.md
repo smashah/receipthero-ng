@@ -84,3 +84,22 @@ From `packages/shared/src/schemas.ts`:
 - **Icons**: `lucide-react` was required but missing from `package.json`, so it was installed. Shadcn components often rely on it.
 - **Error Handling**: Handled 503 service unavailable by checking for `health` data existence even if `isError` is true (though `fetchApi` throws, so we mostly rely on `isLoading` and `!health` for initial load).
 - **Styling**: Used `shadcn` components (`Card`, `Badge`, `Button`) with standard utility classes. Custom `Badge` variant logic was implemented to map API status ('ok'/'error') to visual variants ('default'/'destructive').
+
+---
+
+# Settings Page Implementation (Task 3)
+
+## Form State Management
+- Managed complex form state with nested objects (`localConfig` state).
+- Synced local state with remote data using `useEffect` when `useConfig` query returns.
+- Used individual change handlers for different sections (`handlePaperlessChange`, `handleProcessingChange`, etc.) to keep code organized.
+
+## Toast Integration
+- Installed `sonner` for toast notifications.
+- Added `<Toaster />` to `apps/webapp/src/routes/__root.tsx` to ensure toasts work globally.
+- Used `toast.success`, `toast.error`, and `toast.warning` for user feedback on connection tests and save operations.
+
+## Mask Detection & Handling
+- Implemented `isMasked` helper to detect values like `***` or `...` coming from the server.
+- Before saving, filtered out masked fields from the payload using `JSON.parse(JSON.stringify(config))` and deleting keys if `isMasked` returns true.
+- This ensures that if the user doesn't change a sensitive field (leaving it masked), it is not overwritten with the masked string on the server.

@@ -3,6 +3,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { Toaster } from 'sonner'
 
 import appCss from '../styles.css?url'
 
@@ -31,7 +32,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'ReceiptHero',
       },
     ],
     links: [
@@ -56,6 +57,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           {children}
           <ReactQueryDevtools initialIsOpen={false} />
         </QueryClientProvider>
+        <Toaster richColors position="top-right" />
         <TanStackDevtools
           config={{
             position: 'bottom-right',
