@@ -4,22 +4,23 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/index.ts & bun run --watch src/worker.ts",
-    "start": "bun run src/index.ts & bun run src/worker.ts",
+    "dev": "pnpm run db:migrate && pnpm run db:migrate && bun run --env-file=.env --watch src/index.ts --port 3000 & bun run --env-file=.env --watch src/worker.ts --port 3001",
+    "start": "bun run --env-file=.env src/index.ts & bun run --env-file=.env src/worker.ts",
     "test": "bun test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@sm-rn/shared": "workspace:*",
-    "hono": "catalog:",
     "@hono/zod-validator": "^0.4.2",
-    "drizzle-orm": "^0.38.4",
-    "together-ai": "catalog:",
-    "zod": "catalog:",
+    "@sm-rn/shared": "workspace:*",
     "@upstash/ratelimit": "catalog:",
-    "@upstash/redis": "catalog:"
+    "@upstash/redis": "catalog:",
+    "better-sqlite3": "^12.6.2",
+    "drizzle-orm": "^0.38.4",
+    "hono": "catalog:",
+    "together-ai": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

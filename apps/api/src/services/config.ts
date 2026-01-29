@@ -97,11 +97,11 @@ export function loadConfig(): Config {
     console.warn(`Could not read config file: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  // If we just created a fresh config with placeholder values, let validation fail gracefully
+  // If we just created a fresh config with placeholder values, log a warning
   if (wasCreated) {
-    throw new Error(
+    console.warn(
       `A default config file was created at ${CONFIG_PATH}.\n` +
-      `Please update the placeholder API keys before running again:\n` +
+      `Please update the placeholder API keys:\n` +
       `  - paperless.apiKey\n` +
       `  - togetherAi.apiKey`
     );

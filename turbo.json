@@ -1,10 +1,21 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalDependencies": [
+    ".env",
+    ".env.local"
+  ],
+  "globalEnv": [
+    "NODE_ENV"
+  ],
   "tasks": {
     "build": {
       "dependsOn": [
         "^build"
+      ],
+      "env": [
+        "DATABASE_PATH",
+        "CONFIG_PATH"
       ],
       "outputs": [
         ".next/**",
@@ -15,11 +26,23 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "PORT",
+        "DATABASE_PATH",
+        "CONFIG_PATH",
+        "PAPERLESS_HOST",
+        "PAPERLESS_API_KEY",
+        "TOGETHER_API_KEY"
+      ]
     },
     "test": {
       "dependsOn": [
         "^build"
+      ],
+      "env": [
+        "DATABASE_PATH",
+        "CONFIG_PATH"
       ],
       "outputs": [
         "coverage/**"
