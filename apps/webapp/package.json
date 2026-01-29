@@ -27,6 +27,7 @@
     "@tanstack/router-plugin": "^1.132.0",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
+    "lucide-react": "^0.563.0",
     "nitro": "latest",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

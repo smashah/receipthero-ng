@@ -72,3 +72,15 @@ From `packages/shared/src/schemas.ts`:
 ## Build Notes
 - `bun run --filter @sm-rn/webapp build` passes
 - "use client" directive warnings from react-query modules are expected and harmless (bundler handles them)
+
+---
+
+# Dashboard Page Implementation (Task 2)
+
+## Dashboard Page Implementation
+- **Layout Patterns**: Used a responsive grid layout with `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` for status cards and `lg:grid-cols-7` for the detailed section (split 4/3). This matches the requested responsive behavior without separate mobile components.
+- **TanStack Router**: Implemented the route using `createFileRoute('/')` and exporting it as `Route`. Used `Link` for navigation to settings.
+- **Data Fetching**: Leveraged `useHealth` and `useConfig` custom hooks from `lib/queries.ts`. Used `refetch` from `useQuery` result for the manual refresh button.
+- **Icons**: `lucide-react` was required but missing from `package.json`, so it was installed. Shadcn components often rely on it.
+- **Error Handling**: Handled 503 service unavailable by checking for `health` data existence even if `isError` is true (though `fetchApi` throws, so we mostly rely on `isLoading` and `!health` for initial load).
+- **Styling**: Used `shadcn` components (`Card`, `Badge`, `Button`) with standard utility classes. Custom `Badge` variant logic was implemented to map API status ('ok'/'error') to visual variants ('default'/'destructive').
