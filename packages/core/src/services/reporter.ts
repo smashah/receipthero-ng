@@ -1,5 +1,9 @@
 import { type ProcessingEventType } from '@sm-rn/shared/types';
 
+// Note: We can't use createLogger here to avoid circular dependency
+// (logger.ts imports reporter.ts, so reporter.ts can't import logger.ts)
+// This is fine since reporter errors are rare edge cases
+
 export class StatusReporter {
   private apiUrl: string;
 
@@ -15,10 +19,10 @@ export class StatusReporter {
         body: JSON.stringify({ type, payload }),
       });
       if (!response.ok) {
-        console.error(`Failed to report status: ${response.status} ${response.statusText}`);
+        // Silent fail - don't spam logs when API is starting up
       }
-    } catch (error) {
-      console.error('Failed to report status (network error):', error);
+    } catch {
+      // Silent fail - network errors are expected when API isn't running
     }
   }
 }

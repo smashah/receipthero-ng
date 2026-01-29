@@ -5,6 +5,7 @@ import { RetryQueue } from './retry-queue';
 import { createTogetherClient } from './together-client';
 import { reporter } from './reporter';
 import { logger } from './logger';
+import { skippedDocuments } from './skipped-documents';
 import type { Together } from 'together-ai';
 
 import { db, schema } from '../db';
@@ -82,11 +83,40 @@ export async function processPaperlessDocument(
       
       if (receipts.length === 0) {
         logger.warn(`No receipt data found for document ${documentId}`);
-        await reporter.report('receipt:success', { documentId, progress: 100, message: 'No receipt data found (skipped)' });
+        
+        // Tag as skipped in Paperless
+        const skippedTagName = config.processing.skippedTag;
+        try {
+          const skippedTagId = await client.getOrCreateTag(skippedTagName);
+          const currentTags = doc.tags || [];
+          if (!currentTags.includes(skippedTagId)) {
+            currentTags.push(skippedTagId);
+            await client.updateDocument(documentId, { tags: currentTags });
+            logger.info(`Document ${documentId} tagged as "${skippedTagName}"`);
+          }
+        } catch (tagError) {
+          logger.error(`Failed to add skipped tag to document ${documentId}:`, tagError);
+        }
+        
+        // Track in skipped documents table
+        await skippedDocuments.add(documentId, 'no_receipt_data', doc.title);
+        
+        await reporter.report('receipt:skipped', { documentId, progress: 100, message: 'No receipt data found (skipped)' });
         if (retryQueue) await retryQueue.remove(documentId);
         return;
       }
       receipt = receipts[0];
+      
+      // Persist extracted data immediately so retries can reuse it
+      await reporter.report('receipt:processing', { 
+        documentId, 
+        progress: 50, 
+        message: 'AI extraction complete',
+        vendor: receipt.vendor,
+        amount: Math.round(receipt.amount * 100),
+        currency: receipt.currency,
+        receiptData: JSON.stringify(receipt)
+      });
     }
 
     // 4. Update Paperless-NGX

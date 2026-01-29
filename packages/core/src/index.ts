@@ -8,3 +8,5 @@ export * from './services/retry-queue';
 export * from './services/together-client';
 export * from './services/reporter';
 export * from './services/logger';
+export * from './services/worker-state';
+export * from './services/skipped-documents';

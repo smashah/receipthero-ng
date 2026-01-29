@@ -1,5 +1,8 @@
 import { eq, lte } from 'drizzle-orm';
 import { db, schema } from '../db';
+import { createLogger } from './logger';
+
+const logger = createLogger('queue');
 
 /**
  * Retry queue with exponential backoff for failed document processing.
@@ -75,9 +78,7 @@ export class RetryQueue {
         .run();
     }
 
-    console.log(
-      `Retry queue: document ${documentId} failed (attempt ${attempts}/${this.maxRetries}), will retry in ${this.formatDelay(delay)}`
-    );
+    logger.warn(`Document ${documentId} failed (attempt ${attempts}/${this.maxRetries}), will retry in ${this.formatDelay(delay)}`);
   }
 
   /**
@@ -157,11 +158,55 @@ export class RetryQueue {
   }
 
   /**
+   * Get all items in the retry queue.
+   */
+  async getAll(): Promise<schema.RetryQueueEntry[]> {
+    return await db
+      .select()
+      .from(schema.retryQueue)
+      .all();
+  }
+
+  /**
+   * Reset all items to retry immediately (set nextRetryAt to now).
+   * Returns the number of items reset.
+   */
+  async retryAll(): Promise<number> {
+    const items = await this.getAll();
+    const now = new Date().toISOString();
+
+    for (const item of items) {
+      await db
+        .update(schema.retryQueue)
+        .set({
+          nextRetryAt: now,
+          attempts: 0, // Reset attempts so they get full retry count
+        })
+        .where(eq(schema.retryQueue.id, item.id))
+        .run();
+    }
+
+    logger.info(`Reset ${items.length} items for immediate retry`);
+    return items.length;
+  }
+
+  /**
+   * Clear all items from the retry queue.
+   * Returns the number of items cleared.
+   */
+  async clear(): Promise<number> {
+    const count = await this.size();
+    await db.delete(schema.retryQueue).run();
+    logger.info(`Cleared ${count} items from queue`);
+    return count;
+  }
+
+  /**
    * Log queue statistics.
    */
   async logStats(): Promise<void> {
     const total = await this.size();
     const ready = await this.getReadyForRetry();
-    console.log(`Retry queue: ${total} documents, ${ready.length} ready for retry`);
+    logger.info(`${total} documents in queue, ${ready.length} ready for retry`);
   }
 }

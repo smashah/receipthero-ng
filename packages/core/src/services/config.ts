@@ -1,6 +1,9 @@
 import { ConfigSchema, type Config } from '@sm-rn/shared/schemas';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createLogger } from './logger';
+
+const logger = createLogger('config');
 
 // Configuration file path
 export const CONFIG_PATH = process.env.CONFIG_PATH || '/app/data/config.json';
@@ -22,6 +25,7 @@ function getDefaultConfigTemplate(): Record<string, unknown> {
       receiptTag: 'receipt',
       processedTag: 'processed',
       failedTag: 'failed',
+      skippedTag: 'ai-skipped',
       maxRetries: 3,
     },
     rateLimit: {
@@ -56,11 +60,11 @@ function ensureConfigFileExists(): boolean {
     const defaultConfig = getDefaultConfigTemplate();
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(defaultConfig, null, 2), 'utf-8');
 
-    console.log(`Created default config file at ${CONFIG_PATH}`);
-    console.log('Please update the placeholder values (especially API keys) before running again.');
+    logger.lifecycle('📝', `Created default config file at ${CONFIG_PATH}`);
+    logger.warn('Please update the placeholder values (especially API keys) before running again.');
     return true;
   } catch (error) {
-    console.warn(`Could not create default config file: ${error instanceof Error ? error.message : String(error)}`);
+    logger.warn(`Could not create default config file: ${error instanceof Error ? error.message : String(error)}`);
     return false;
   }
 }
@@ -94,16 +98,14 @@ export function loadConfig(): Config {
       throw new Error(`Invalid JSON in config file ${CONFIG_PATH}: ${error.message}`);
     }
     // If file doesn't exist or can't be read, continue with env vars only
-    console.warn(`Could not read config file: ${error instanceof Error ? error.message : String(error)}`);
+    logger.warn(`Could not read config file: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // If we just created a fresh config with placeholder values, log a warning
   if (wasCreated) {
-    console.warn(
-      `A default config file was created at ${CONFIG_PATH}.\n` +
-      `Please update the placeholder API keys:\n` +
-      `  - paperless.apiKey\n` +
-      `  - togetherAi.apiKey`
+    logger.warn(
+      `A default config file was created at ${CONFIG_PATH}. ` +
+      `Please update the placeholder API keys: paperless.apiKey, togetherAi.apiKey`
     );
   }
 
@@ -125,6 +127,7 @@ export function loadConfig(): Config {
       receiptTag: getConfigValue(fileConfig, ['processing', 'receiptTag'], process.env.RECEIPT_TAG),
       processedTag: getConfigValue(fileConfig, ['processing', 'processedTag'], process.env.PROCESSED_TAG),
       failedTag: getConfigValue(fileConfig, ['processing', 'failedTag'], process.env.FAILED_TAG),
+      skippedTag: getConfigValue(fileConfig, ['processing', 'skippedTag'], process.env.SKIPPED_TAG),
       maxRetries: getConfigValueNumber(
         fileConfig,
         ['processing', 'maxRetries'],
