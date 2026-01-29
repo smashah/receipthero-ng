@@ -9,6 +9,11 @@ import {
   Server,
   FileText,
   Loader2,
+  Pause,
+  Play,
+  RotateCcw,
+  Trash2,
+  SkipForward,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,7 +25,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useHealth, useConfig } from '@/lib/queries';
+import { useHealth, useConfig, usePauseWorker, useResumeWorker, useRetryAllQueue, useClearQueue } from '@/lib/queries';
 import { useAppEvents } from '@/hooks/use-app-events';
 import { ProcessingList } from '@/components/processing-list';
 import { CliOutput } from '@/components/ui/cli-output';
@@ -44,6 +49,12 @@ function DashboardPage() {
 
   const { data: config, isLoading: isConfigLoading } = useConfig();
   const { processingLogs, appLogs } = useAppEvents();
+  
+  // Worker control mutations
+  const pauseWorker = usePauseWorker();
+  const resumeWorker = useResumeWorker();
+  const retryAllQueue = useRetryAllQueue();
+  const clearQueue = useClearQueue();
 
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
@@ -67,6 +78,50 @@ function DashboardPage() {
 
   const isConfigured = health?.checks.config === 'ok';
   const isLoading = isHealthLoading || isConfigLoading;
+
+  // Error state - show connection error with retry info
+  if (isHealthError && !health) {
+    const errorMessage = healthError instanceof Error 
+      ? healthError.message 
+      : 'Unknown error';
+    
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-50/50">
+        <div className="text-center space-y-4 max-w-md px-4">
+          <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+            <XCircle className="h-6 w-6 text-red-600" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold text-gray-900">Connection Failed</h2>
+            <p className="text-sm text-muted-foreground">
+              Could not connect to the API server. This usually means the backend is unreachable or you're not connected to the right network.
+            </p>
+            <p className="text-xs text-muted-foreground font-mono bg-muted p-2 rounded">
+              {errorMessage}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button onClick={handleRefresh} disabled={isHealthLoading}>
+              {isHealthLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Retrying...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Auto-retry every 30 seconds
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading && !health) {
     return (
@@ -212,7 +267,7 @@ function DashboardPage() {
             </CardHeader>
             <CardContent>
               {health?.stats ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div className="space-y-1">
                     <span className="text-3xl font-bold tracking-tight">{health.stats.detected}</span>
                     <p className="text-xs text-muted-foreground uppercase font-medium">Detected</p>
@@ -224,6 +279,10 @@ function DashboardPage() {
                   <div className="space-y-1 border-l pl-4">
                     <span className="text-3xl font-bold tracking-tight text-destructive">{health.stats.failed}</span>
                     <p className="text-xs text-muted-foreground uppercase font-medium">Failed</p>
+                  </div>
+                  <div className="space-y-1 border-l pl-4">
+                    <span className="text-3xl font-bold tracking-tight text-gray-500">{health.stats.skipped}</span>
+                    <p className="text-xs text-muted-foreground uppercase font-medium">Skipped</p>
                   </div>
                   <div className="space-y-1 border-l pl-4">
                     <span className="text-3xl font-bold tracking-tight text-yellow-600">{health.stats.inQueue}</span>
@@ -238,6 +297,91 @@ function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Worker Control Card */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                Worker Control
+              </CardTitle>
+              {health?.worker?.isPaused ? (
+                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                  <Pause className="h-3 w-3 mr-1" /> Paused
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                  <Play className="h-3 w-3 mr-1" /> Running
+                </Badge>
+              )}
+            </div>
+            {health?.worker?.isPaused && health.worker.pauseReason && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Reason: {health.worker.pauseReason}
+              </p>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {health?.worker?.isPaused ? (
+                <Button
+                  size="sm"
+                  onClick={() => resumeWorker.mutate()}
+                  disabled={resumeWorker.isPending}
+                >
+                  {resumeWorker.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-2" />
+                  )}
+                  Resume Worker
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => pauseWorker.mutate()}
+                  disabled={pauseWorker.isPending}
+                >
+                  {pauseWorker.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Pause className="h-4 w-4 mr-2" />
+                  )}
+                  Pause Worker
+                </Button>
+              )}
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => retryAllQueue.mutate()}
+                disabled={retryAllQueue.isPending || !health?.stats?.inQueue}
+              >
+                {retryAllQueue.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                )}
+                Retry All ({health?.stats?.inQueue || 0})
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => clearQueue.mutate()}
+                disabled={clearQueue.isPending || !health?.stats?.inQueue}
+              >
+                {clearQueue.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Clear Queue
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Real-time Activity Section */}
         <ProcessingList logs={processingLogs} />

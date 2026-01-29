@@ -2,7 +2,8 @@ import { type ProcessingLog } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle2, XCircle, Loader2, Eye, ExternalLink, Activity } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FileText, CheckCircle2, XCircle, Loader2, Eye, ExternalLink, Activity, Brain, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import {
   Dialog,
@@ -13,6 +14,7 @@ import {
 import { JsonViewer } from './devtools/json-viewer';
 import { CliOutput } from './ui/cli-output';
 import { API_BASE_URL } from '@/lib/api';
+import { useRetryProcessing } from '@/lib/queries';
 
 export function ProcessingList({ logs }: { logs: ProcessingLog[] }) {
   const [selectedLog, setSelectedLog] = useState<ProcessingLog | null>(null);
@@ -71,12 +73,27 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
   open: boolean, 
   onOpenChange: (open: boolean) => void 
 }) {
+  const retryMutation = useRetryProcessing();
+  
   if (!log) return null;
 
   const isComplete = log.status === 'completed';
+  const isFailed = log.status === 'failed';
   const receiptData = log.receiptData ? JSON.parse(log.receiptData) : null;
+
   const thumbnailUrl = `${API_BASE_URL}/api/documents/${log.documentId}/thumbnail`;
   const originalUrl = `${API_BASE_URL}/api/documents/${log.documentId}/image`;
+
+  const handleRetry = (strategy: 'full' | 'partial') => {
+    retryMutation.mutate(
+      { id: log.documentId, strategy },
+      {
+        onSuccess: () => {
+          onOpenChange(false);
+        },
+      }
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -88,7 +105,33 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
               {log.fileName || `Document #${log.documentId}`}
             </DialogTitle>
             <div className="flex items-center gap-2 mr-6">
-              <Badge variant={isComplete ? "default" : "secondary"} className="capitalize">
+              {isFailed && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleRetry('partial')}
+                    disabled={retryMutation.isPending}
+                  >
+                    {retryMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                    Retry
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleRetry('full')}
+                    disabled={retryMutation.isPending}
+                    title="Full retry (re-extract from image)"
+                  >
+                    Full
+                  </Button>
+                </div>
+              )}
+              <Badge variant={isComplete ? "default" : isFailed ? "destructive" : "secondary"} className="capitalize">
                 {log.status}
               </Badge>
               {log.attempts > 1 && (
@@ -130,7 +173,7 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
 
           {/* Right Side: Logs or JSON */}
           <div className="w-1/2 flex flex-col p-4 overflow-hidden bg-zinc-50">
-            {isComplete && receiptData ? (
+            {receiptData ? (
               <div className="flex-1 flex flex-col overflow-hidden space-y-4">
                 {/* JSON Section (Top 3/4) */}
                 <div className="flex-[3] flex flex-col overflow-hidden min-h-0">

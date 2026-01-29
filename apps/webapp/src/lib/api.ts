@@ -22,13 +22,49 @@ export interface HealthStatus {
     togetherAiConnection: 'ok' | 'error';
     config: 'ok' | 'error';
   };
+  worker?: {
+    isPaused: boolean;
+    pausedAt: string | null;
+    pauseReason: string | null;
+  };
   stats?: {
     detected: number;
     processed: number;
     failed: number;
+    skipped: number;
     inQueue: number;
   };
   errors?: string[];
+}
+
+export interface WorkerStatus {
+  success: boolean;
+  isPaused: boolean;
+  pausedAt: string | null;
+  pauseReason: string | null;
+  message?: string;
+}
+
+export interface QueueStatus {
+  success: boolean;
+  queue: {
+    size: number;
+    items: Array<{
+      documentId: number;
+      attempts: number;
+      lastError: string;
+      nextRetryAt: string;
+    }>;
+  };
+  skipped: {
+    count: number;
+  };
+}
+
+export interface QueueActionResponse {
+  success: boolean;
+  message: string;
+  count: number;
 }
 
 export interface ApiError {
@@ -78,6 +114,16 @@ export const healthKeys = {
 export const configKeys = {
   all: ['config'] as const,
   current: () => [...configKeys.all, 'current'] as const,
+};
+
+export const workerKeys = {
+  all: ['worker'] as const,
+  status: () => [...workerKeys.all, 'status'] as const,
+};
+
+export const queueKeys = {
+  all: ['queue'] as const,
+  status: () => [...queueKeys.all, 'status'] as const,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

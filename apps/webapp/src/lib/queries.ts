@@ -3,11 +3,16 @@ import {
   fetchApi,
   healthKeys,
   configKeys,
+  workerKeys,
+  queueKeys,
   type HealthStatus,
   type Config,
   type SaveConfigResponse,
   type TestConnectionResponse,
   type ProcessingLog,
+  type WorkerStatus,
+  type QueueStatus,
+  type QueueActionResponse,
 } from './api';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,5 +131,115 @@ export function useTestTogether() {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Worker Control Mutations
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Pauses the worker.
+ */
+export function usePauseWorker() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (reason?: string) =>
+      fetchApi<WorkerStatus>('/api/worker/pause', {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: healthKeys.all });
+      queryClient.invalidateQueries({ queryKey: workerKeys.all });
+    },
+  });
+}
+
+/**
+ * Resumes the worker.
+ */
+export function useResumeWorker() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      fetchApi<WorkerStatus>('/api/worker/resume', {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: healthKeys.all });
+      queryClient.invalidateQueries({ queryKey: workerKeys.all });
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Queue Control Mutations
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Fetches queue status.
+ */
+export function useQueueStatus() {
+  return useQuery({
+    queryKey: queueKeys.status(),
+    queryFn: () => fetchApi<QueueStatus>('/api/queue'),
+    refetchInterval: 30_000,
+  });
+}
+
+/**
+ * Retry all items in the queue immediately.
+ */
+export function useRetryAllQueue() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      fetchApi<QueueActionResponse>('/api/queue/retry-all', {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: healthKeys.all });
+      queryClient.invalidateQueries({ queryKey: queueKeys.all });
+    },
+  });
+}
+
+/**
+ * Clear all items from the queue.
+ */
+export function useClearQueue() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      fetchApi<QueueActionResponse>('/api/queue/clear', {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: healthKeys.all });
+      queryClient.invalidateQueries({ queryKey: queueKeys.all });
+    },
+  });
+}
+
+/**
+ * Clear skipped documents list.
+ */
+export function useClearSkipped() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      fetchApi<QueueActionResponse>('/api/queue/skipped/clear', {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: healthKeys.all });
+      queryClient.invalidateQueries({ queryKey: queueKeys.all });
+    },
   });
 }

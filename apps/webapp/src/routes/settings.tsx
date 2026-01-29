@@ -56,7 +56,9 @@ function SettingsPage() {
       receiptTag: 'receipt',
       processedTag: 'ai-processed',
       failedTag: 'ai-failed',
-      maxRetries: 3
+      skippedTag: 'ai-skipped',
+      maxRetries: 3,
+      retryStrategy: 'partial'
     },
     rateLimit: {
       enabled: false,
@@ -457,7 +459,7 @@ function SettingsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="tag-receipt">Receipt Tag</Label>
                   <Input
@@ -487,6 +489,16 @@ function SettingsPage() {
                     className={errors['processing.failedTag'] ? 'border-destructive' : ''}
                   />
                   <ErrorMessage path="processing.failedTag" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tag-skipped">Skipped Tag</Label>
+                  <Input
+                    id="tag-skipped"
+                    value={localConfig.processing.skippedTag}
+                    onChange={(e) => handleProcessingChange('skippedTag', e.target.value)}
+                    className={errors['processing.skippedTag'] ? 'border-destructive' : ''}
+                  />
+                  <ErrorMessage path="processing.skippedTag" />
                 </div>
               </div>
             </div>
