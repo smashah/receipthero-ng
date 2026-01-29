@@ -23,9 +23,9 @@ function getDefaultConfigTemplate(): Record<string, unknown> {
     processing: {
       scanInterval: 60000,
       receiptTag: 'receipt',
-      processedTag: 'processed',
-      failedTag: 'failed',
-      skippedTag: 'ai-skipped',
+      processedTag: 'receipt-processed',
+      failedTag: 'receipt-failed',
+      skippedTag: 'receipt-skipped',
       maxRetries: 3,
     },
     rateLimit: {

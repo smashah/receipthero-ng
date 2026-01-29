@@ -42,6 +42,7 @@ export class PaperlessClient {
 
   async getOrCreateTag(name: string): Promise<number> {
     const tags = await this.getTags();
+    console.log("Found tags:", tags, name)
     const existing = tags.find((t: any) => t.name.toLowerCase() === name.toLowerCase());
     if (existing) return existing.id;
 
@@ -53,6 +54,7 @@ export class PaperlessClient {
       const data = await res.json() as any;
       return data.id;
     } catch (error: any) {
+      console.log("1IUH23IU1H23:", error.message)
       // If it fails with a unique constraint error, try to fetch again
       // The object might have been created by another process
       if (error.message?.includes("unique constraint") || error.message?.includes("400")) {
@@ -96,7 +98,7 @@ export class PaperlessClient {
     const tags = await this.getTags();
     const processedTag = tags.find((t: any) => t.name.toLowerCase() === processedTagName.toLowerCase());
     const receiptTag = tags.find((t: any) => t.name.toLowerCase() === receiptTagName.toLowerCase());
-    
+
     // Search for documents that HAVE the receipt tag AND DON'T have the processed tag
     let queryParts: string[] = [];
     if (receiptTag) {
@@ -106,15 +108,15 @@ export class PaperlessClient {
       queryParts.push(`tags__id__none=${processedTag.id}`);
     }
     const query = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
-    
+
     let allDocs: any[] = [];
     let nextUrl: string | null = `/documents/${query}`;
-    
+
     while (nextUrl) {
       const res = await this.fetchApi(nextUrl);
       const data = await res.json() as any;
       allDocs = allDocs.concat(data.results);
-      
+
       if (data.next) {
         const url = new URL(data.next);
         const pathname = url.pathname.startsWith("/api")
@@ -125,7 +127,7 @@ export class PaperlessClient {
         nextUrl = null;
       }
     }
-    
+
     return allDocs;
   }
 
