@@ -41,3 +41,27 @@ export const logs = sqliteTable('logs', {
 
 export type LogEntryRow = typeof logs.$inferSelect;
 export type NewLogEntryRow = typeof logs.$inferInsert;
+
+// Worker state for pause/resume control (single row table)
+export const workerStateSchema = sqliteTable('worker_state', {
+  id: integer('id').primaryKey().default(1), // Always id=1, single row
+  isPaused: integer('isPaused', { mode: 'boolean' }).notNull().default(false),
+  pausedAt: text('pausedAt'), // ISO date string when paused
+  pauseReason: text('pauseReason'), // Optional reason for pause
+  updatedAt: text('updatedAt').notNull(),
+});
+
+export type WorkerStateRow = typeof workerStateSchema.$inferSelect;
+export type NewWorkerStateRow = typeof workerStateSchema.$inferInsert;
+
+// Skipped documents tracking
+export const skippedDocumentsSchema = sqliteTable('skipped_documents', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  documentId: integer('documentId').unique().notNull(),
+  reason: text('reason').notNull(), // e.g., 'no_receipt_data', 'unsupported_format'
+  fileName: text('fileName'),
+  skippedAt: text('skippedAt').notNull(), // ISO date string
+});
+
+export type SkippedDocumentEntry = typeof skippedDocumentsSchema.$inferSelect;
+export type NewSkippedDocumentEntry = typeof skippedDocumentsSchema.$inferInsert;

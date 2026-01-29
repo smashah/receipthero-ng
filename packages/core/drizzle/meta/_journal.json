@@ -22,6 +22,13 @@
       "when": 1769709540792,
       "tag": "0002_quick_blockbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1769719016287,
+      "tag": "0003_thankful_the_stranger",
+      "breakpoints": true
     }
   ]
 }
