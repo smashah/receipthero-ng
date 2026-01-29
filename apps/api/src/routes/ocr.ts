@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { extractReceiptData } from '../services/ocr';
-import { createTogetherClient } from '../services/together-client';
-import { loadConfig } from '../services/config';
+import { extractReceiptData } from '@sm-rn/core';
+import { createTogetherClient } from '@sm-rn/core';
+import { loadConfig } from '@sm-rn/core';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 

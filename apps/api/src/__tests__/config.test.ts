@@ -4,7 +4,7 @@ import app from '../index';
 describe('Config Route', () => {
   test('GET /api/config returns config with masked keys', async () => {
     const res = await app.request('/api/config');
-    const data = await res.json();
+    const data = await res.json() as any;
 
     if (res.status === 200) {
       expect(data).toHaveProperty('paperless');

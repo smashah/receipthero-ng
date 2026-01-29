@@ -4,13 +4,32 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: Dockerfile
+    command: bun run --filter @sm-rn/api start
     environment:
       - DATABASE_PATH=/app/data/receipthero.db
       - CONFIG_PATH=/app/data/config.json
       - PORT=3001
     volumes:
       - app-data:/app/data
+    ports:
+      - "3001:3001"
+    networks:
+      - receipthero
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bun run --filter @sm-rn/worker start
+    environment:
+      - DATABASE_PATH=/app/data/receipthero.db
+      - CONFIG_PATH=/app/data/config.json
+    volumes:
+      - app-data:/app/data
+    depends_on:
+      - api
     networks:
       - receipthero
     restart: unless-stopped

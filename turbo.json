@@ -9,6 +9,9 @@
     "NODE_ENV"
   ],
   "tasks": {
+    "db:setup": {
+      "cache": false
+    },
     "build": {
       "dependsOn": [
         "^build"
@@ -27,6 +30,9 @@
     "dev": {
       "cache": false,
       "persistent": true,
+      "dependsOn": [
+        "^db:setup"
+      ],
       "env": [
         "PORT",
         "DATABASE_PATH",

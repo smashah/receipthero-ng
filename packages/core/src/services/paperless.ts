@@ -36,7 +36,7 @@ export class PaperlessClient {
 
   async getTags() {
     const res = await this.fetchApi("/tags/");
-    const data = await res.json();
+    const data = await res.json() as any;
     return data.results;
   }
 
@@ -49,13 +49,13 @@ export class PaperlessClient {
       method: "POST",
       body: JSON.stringify({ name, color: "#00FF00" }),
     });
-    const data = await res.json();
+    const data = await res.json() as any;
     return data.id;
   }
 
   async getOrCreateCorrespondent(name: string): Promise<number> {
     const res = await this.fetchApi(`/correspondents/?name__icontains=${encodeURIComponent(name)}`);
-    const data = await res.json();
+    const data = await res.json() as any;
     const existing = data.results.find((c: any) => c.name.toLowerCase() === name.toLowerCase());
     if (existing) return existing.id;
 
@@ -63,7 +63,7 @@ export class PaperlessClient {
       method: "POST",
       body: JSON.stringify({ name }),
     });
-    const postData = await postRes.json();
+    const postData = await postRes.json() as any;
     return postData.id;
   }
 
@@ -91,7 +91,7 @@ export class PaperlessClient {
     
     while (nextUrl) {
       const res = await this.fetchApi(nextUrl);
-      const data = await res.json();
+      const data = await res.json() as any;
       allDocs = allDocs.concat(data.results);
       
       if (data.next) {
@@ -108,7 +108,7 @@ export class PaperlessClient {
     return allDocs;
   }
 
-  async getDocument(id: number) {
+  async getDocument(id: number): Promise<any> {
     const res = await this.fetchApi(`/documents/${id}/`);
     return await res.json();
   }

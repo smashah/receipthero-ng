@@ -4,7 +4,7 @@ import app from '../index';
 describe('Health Route', () => {
   test('GET /api/health returns health status', async () => {
     const res = await app.request('/api/health');
-    const data = await res.json();
+    const data = await res.json() as any;
 
     expect(res.status).toBeOneOf([200, 503]);
     expect(data).toHaveProperty('status');

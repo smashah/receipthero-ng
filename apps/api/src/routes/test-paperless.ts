@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { PaperlessClient } from '../services/paperless';
+import { PaperlessClient } from '@sm-rn/core';
 
 const testPaperless = new Hono();
 

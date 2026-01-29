@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { ConfigSchema } from '@sm-rn/shared/schemas';
-import { loadConfig, CONFIG_PATH } from '../services/config';
+import { loadConfig, CONFIG_PATH } from '@sm-rn/core';
 import * as fs from 'fs';
 import * as path from 'path';
 

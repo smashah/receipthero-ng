@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { loadConfig } from '../services/config';
-import { PaperlessClient } from '../services/paperless';
+import { loadConfig } from '@sm-rn/core';
+import { PaperlessClient } from '@sm-rn/core';
 
 const health = new Hono();
 

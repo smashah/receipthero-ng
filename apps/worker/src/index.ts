@@ -1,5 +1,4 @@
-import { runAutomation } from './services/bridge';
-import { loadConfig } from './services/config';
+import { runAutomation, loadConfig } from '@sm-rn/core';
 
 let isShuttingDown = false;
 let currentRunPromise: Promise<void> | null = null;
