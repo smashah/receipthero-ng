@@ -8,8 +8,17 @@ export const PaperlessConfigSchema = z.object({
 
 export type PaperlessConfig = z.infer<typeof PaperlessConfigSchema>;
 
+interface Tag {
+  id: number;
+  name: string;
+  [key: string]: unknown;
+}
+
 export class PaperlessClient {
   private config: PaperlessConfig;
+  private tagCache: Map<string, Tag> = new Map();
+  private lastTagRefresh = 0;
+  private readonly CACHE_LIFETIME = 3000; // 3 seconds
 
   constructor(config: PaperlessConfig) {
     this.config = config;
@@ -34,36 +43,230 @@ export class PaperlessClient {
     return response;
   }
 
-  async getTags() {
-    const res = await this.fetchApi("/tags/");
-    const data = await res.json() as any;
-    return data.results;
+  /**
+   * Ensures the tag cache is fresh. Refreshes if older than CACHE_LIFETIME.
+   */
+  private async ensureTagCache(): Promise<void> {
+    const now = Date.now();
+    if (this.tagCache.size === 0 || (now - this.lastTagRefresh) > this.CACHE_LIFETIME) {
+      await this.refreshTagCache();
+    }
   }
 
-  async getOrCreateTag(name: string): Promise<number> {
-    const tags = await this.getTags();
-    console.log("Found tags:", tags, name)
-    const existing = tags.find((t: any) => t.name.toLowerCase() === name.toLowerCase());
-    if (existing) return existing.id;
+  /**
+   * Loads all existing tags with pagination support.
+   */
+  private async refreshTagCache(): Promise<void> {
+    console.log("[DEBUG] Refreshing tag cache...");
+    this.tagCache.clear();
+    let nextUrl: string | null = "/tags/";
+
+    while (nextUrl) {
+      const response = await this.fetchApi(nextUrl);
+      const data = await response.json() as any;
+
+      // Validate response structure
+      if (!data?.results) {
+        console.error("[ERROR] Invalid response structure from API:", data);
+        break;
+      }
+
+      for (const tag of data.results) {
+        this.tagCache.set(tag.name.toLowerCase(), tag);
+      }
+
+      // Handle pagination - extract relative path from next URL
+      if (data.next) {
+        try {
+          const nextUrlObj = new URL(data.next);
+          const baseUrl = this.config.host.replace(/\/$/, "");
+          const baseUrlObj = new URL(baseUrl);
+
+          // Extract path relative to baseURL to avoid double /api/ prefix
+          let relativePath = nextUrlObj.pathname;
+          // Remove /api prefix if present since fetchApi adds it
+          if (relativePath.startsWith("/api")) {
+            relativePath = relativePath.substring(4);
+          }
+          // Remove base path if included
+          if (baseUrlObj.pathname && baseUrlObj.pathname !== "/") {
+            relativePath = relativePath.replace(baseUrlObj.pathname, "");
+          }
+          // Ensure path starts with /
+          if (!relativePath.startsWith("/")) {
+            relativePath = "/" + relativePath;
+          }
+
+          nextUrl = relativePath + nextUrlObj.search;
+          console.log("[DEBUG] Next page URL:", nextUrl);
+        } catch (e: any) {
+          console.error("[ERROR] Failed to parse next URL:", e.message);
+          nextUrl = null;
+        }
+      } else {
+        nextUrl = null;
+      }
+    }
+
+    this.lastTagRefresh = Date.now();
+    console.log(`[DEBUG] Tag cache refreshed. Found ${this.tagCache.size} tags.`);
+  }
+
+  /**
+   * Finds an existing tag by name, checking cache first then API.
+   */
+  async findExistingTag(tagName: string): Promise<Tag | null> {
+    const normalizedName = tagName.toLowerCase();
+
+    // 1. Check cache first
+    const cachedTag = this.tagCache.get(normalizedName);
+    if (cachedTag) {
+      console.log(`[DEBUG] Found tag "${tagName}" in cache with ID ${cachedTag.id}`);
+      return cachedTag;
+    }
+
+    // 2. Direct API search with case-insensitive exact match
+    try {
+      const response = await this.fetchApi(`/tags/?name__iexact=${encodeURIComponent(normalizedName)}`);
+      const data = await response.json() as any;
+
+      if (data.results.length > 0) {
+        const foundTag = data.results[0];
+        console.log(`[DEBUG] Found existing tag "${tagName}" via API with ID ${foundTag.id}`);
+        this.tagCache.set(normalizedName, foundTag);
+        return foundTag;
+      }
+    } catch (error: any) {
+      console.warn(`[ERROR] searching for tag "${tagName}":`, error.message);
+    }
+
+    return null;
+  }
+
+  /**
+   * Safely creates a tag, handling race conditions.
+   */
+  async createTagSafely(tagName: string): Promise<Tag> {
+    const normalizedName = tagName.toLowerCase();
 
     try {
-      const res = await this.fetchApi("/tags/", {
+      // Try to create the tag
+      const response = await this.fetchApi("/tags/", {
         method: "POST",
-        body: JSON.stringify({ name, color: "#00FF00" }),
+        body: JSON.stringify({ name: tagName }),
       });
-      const data = await res.json() as any;
-      return data.id;
+      const newTag = await response.json() as Tag;
+      console.log(`[DEBUG] Successfully created tag "${tagName}" with ID ${newTag.id}`);
+      this.tagCache.set(normalizedName, newTag);
+      return newTag;
     } catch (error: any) {
-      console.log("1IUH23IU1H23:", error.message)
-      // If it fails with a unique constraint error, try to fetch again
-      // The object might have been created by another process
-      if (error.message?.includes("unique constraint") || error.message?.includes("400")) {
-        const retryTags = await this.getTags();
-        const retryExisting = retryTags.find((t: any) => t.name.toLowerCase() === name.toLowerCase());
-        if (retryExisting) return retryExisting.id;
+      // Handle 400 error (likely tag already exists due to race condition)
+      if (error.message?.includes("400")) {
+        // Refresh cache and search again
+        await this.refreshTagCache();
+
+        const existingTag = await this.findExistingTag(tagName);
+        if (existingTag) {
+          return existingTag;
+        }
       }
       throw error;
     }
+  }
+
+  /**
+   * Get all tags with pagination support.
+   */
+  async getTags(): Promise<Tag[]> {
+    await this.ensureTagCache();
+    return Array.from(this.tagCache.values());
+  }
+
+  /**
+   * Gets or creates a tag by name.
+   */
+  async getOrCreateTag(name: string): Promise<number> {
+    await this.ensureTagCache();
+
+    // Search for existing tag first
+    let tag = await this.findExistingTag(name);
+
+    // If no existing tag found, create new one
+    if (!tag) {
+      tag = await this.createTagSafely(name);
+    }
+
+    return tag.id;
+  }
+
+  /**
+   * Process multiple tags, returning their IDs.
+   */
+  async processTags(
+    tagNames: string | string[],
+    options: { restrictToExistingTags?: boolean } = {}
+  ): Promise<{ tagIds: number[]; errors: Array<{ tagName: string; error: string }> }> {
+    await this.ensureTagCache();
+
+    // Convert to array if string is passed
+    const tagsArray = typeof tagNames === "string"
+      ? [tagNames]
+      : Array.isArray(tagNames)
+        ? tagNames
+        : [];
+
+    if (tagsArray.length === 0) {
+      console.warn("[DEBUG] No valid tags to process");
+      return { tagIds: [], errors: [] };
+    }
+
+    const tagIds: number[] = [];
+    const errors: Array<{ tagName: string; error: string }> = [];
+    const processedTags = new Set<string>(); // Prevent duplicates
+
+    console.log(`[DEBUG] Processing tags with restrictToExistingTags=${options.restrictToExistingTags}`);
+
+    for (const tagName of tagsArray) {
+      if (!tagName || typeof tagName !== "string") {
+        console.warn(`[DEBUG] Skipping invalid tag name: ${tagName}`);
+        errors.push({ tagName: String(tagName), error: "Invalid tag name" });
+        continue;
+      }
+
+      const normalizedName = tagName.toLowerCase().trim();
+
+      // Skip empty or already processed tags
+      if (!normalizedName || processedTags.has(normalizedName)) {
+        continue;
+      }
+
+      try {
+        // Search for existing tag first
+        let tag = await this.findExistingTag(tagName);
+
+        // If no existing tag found and restrictions are not enabled, create new one
+        if (!tag && !options.restrictToExistingTags) {
+          tag = await this.createTagSafely(tagName);
+        } else if (!tag && options.restrictToExistingTags) {
+          console.log(`[DEBUG] Tag "${tagName}" does not exist and restrictions are enabled, skipping`);
+          errors.push({ tagName, error: "Tag does not exist and restrictions are enabled" });
+          continue;
+        }
+
+        if (tag?.id) {
+          tagIds.push(tag.id);
+          processedTags.add(normalizedName);
+        }
+      } catch (error: any) {
+        console.error(`[ERROR] processing tag "${tagName}":`, error.message);
+        errors.push({ tagName, error: error.message });
+      }
+    }
+
+    return {
+      tagIds: [...new Set(tagIds)], // Remove any duplicates
+      errors,
+    };
   }
 
   async getOrCreateCorrespondent(name: string): Promise<number> {
