@@ -3,56 +3,104 @@ import { extractReceiptData } from './ocr';
 import { loadConfig } from './config';
 import { RetryQueue } from './retry-queue';
 import { createTogetherClient } from './together-client';
+import { reporter } from './reporter';
+import { logger } from './logger';
 import type { Together } from 'together-ai';
+
+import { db, schema } from '../db';
+import { eq, desc } from 'drizzle-orm';
 
 export async function processPaperlessDocument(
   client: PaperlessClient,
   documentId: number,
   togetherClient: Together,
   retryQueue?: RetryQueue,
-  failedTag?: string
+  failedTag?: string,
+  forceRetryStrategy?: 'full' | 'partial'
 ) {
+  const config = loadConfig();
+  const retryStrategy = forceRetryStrategy || config.processing.retryStrategy || 'partial';
   const attemptNum = retryQueue ? await retryQueue.getAttempts(documentId) + 1 : 1;
-  const maxRetries = 3;
+  const maxRetries = config.processing.maxRetries || 3;
   
   if (retryQueue && attemptNum > 1) {
-    console.log(`Retrying document ${documentId} (attempt ${attemptNum}/${maxRetries})`);
+    logger.info(`Retrying document ${documentId} (attempt ${attemptNum}/${maxRetries}) using ${retryStrategy} strategy`);
+    await reporter.report('receipt:retry', { documentId, attempts: attemptNum, progress: 0, status: 'retrying' });
   } else {
-    console.log(`Processing document ${documentId}...`);
+    logger.info(`Processing document ${documentId}...`);
+    await reporter.report('receipt:processing', { documentId, attempts: attemptNum, progress: 5, status: 'processing' });
   }
   
   try {
-    // 1. Get document metadata to check if it's already processed or if we need to skip
-    const doc = await client.getDocument(documentId);
-    
-    // 2. Download the file (prefer thumbnail for OCR)
-    let fileBuffer: Buffer;
-    try {
-      fileBuffer = await client.getDocumentThumbnail(documentId);
-      console.log(`Using thumbnail for document ${documentId}`);
-    } catch (error) {
-      console.log(`Thumbnail unavailable, using raw file for document ${documentId}`);
-      fileBuffer = await client.getDocumentFile(documentId);
-    }
-    const base64 = fileBuffer.toString('base64');
-    
-    // 3. Extract data using Together AI (ReceiptHero logic)
-    const receipts = await extractReceiptData(base64, togetherClient);
-    
-    if (receipts.length === 0) {
-      console.log(`No receipt data found for document ${documentId}`);
-      // Success - remove from retry queue if present
-      if (retryQueue) {
-        await retryQueue.remove(documentId);
+    let receipt: any = null;
+
+    // Check if we can use existing data (Partial Retry)
+    if (retryStrategy === 'partial') {
+      const existing = await db
+        .select()
+        .from(schema.processingLogs)
+        .where(eq(schema.processingLogs.documentId, documentId))
+        .orderBy(desc(schema.processingLogs.id))
+        .get();
+
+      if (existing?.receiptData) {
+        try {
+          receipt = JSON.parse(existing.receiptData);
+          logger.info(`Reusing existing receipt data for document ${documentId}`);
+          await reporter.report('receipt:processing', { 
+            documentId, 
+            progress: 50, 
+            message: 'Reusing existing extraction data' 
+          });
+        } catch (e) {
+          logger.warn(`Failed to parse existing receipt data for ${documentId}, falling back to full extraction`);
+        }
       }
-      return;
     }
 
-    // Use the first receipt found (assuming 1 file = 1 receipt mostly, or handle multiple)
-    const receipt = receipts[0];
+    if (!receipt) {
+      // 1. Get document metadata
+      const doc = await client.getDocument(documentId);
+      await reporter.report('receipt:processing', { documentId, fileName: doc.title, progress: 10 });
+      
+      // 2. Download the file
+      let fileBuffer: Buffer;
+      try {
+        fileBuffer = await client.getDocumentThumbnail(documentId);
+        logger.info(`Using thumbnail for document ${documentId}`);
+        await reporter.report('receipt:processing', { documentId, progress: 20, message: 'Using thumbnail' });
+      } catch (error) {
+        logger.info(`Thumbnail unavailable, using raw file for document ${documentId}`);
+        await reporter.report('receipt:processing', { documentId, progress: 20, message: 'Downloading raw file' });
+        fileBuffer = await client.getDocumentFile(documentId);
+      }
+      const base64 = fileBuffer.toString('base64');
+      
+      // 3. Extract data using Together AI
+      await reporter.report('receipt:processing', { documentId, progress: 30, message: 'Extracting data with AI' });
+      const receipts = await extractReceiptData(base64, togetherClient);
+      
+      if (receipts.length === 0) {
+        logger.warn(`No receipt data found for document ${documentId}`);
+        await reporter.report('receipt:success', { documentId, progress: 100, message: 'No receipt data found (skipped)' });
+        if (retryQueue) await retryQueue.remove(documentId);
+        return;
+      }
+      receipt = receipts[0];
+    }
+
+    // 4. Update Paperless-NGX
+    await reporter.report('receipt:processing', { 
+      documentId, 
+      progress: 70, 
+      message: 'Updating Paperless-NGX',
+      vendor: receipt.vendor,
+      amount: Math.round(receipt.amount * 100),
+      currency: receipt.currency
+    });
     
-    // 4. Prepare updates for Paperless
-    const processedTagId = await client.getOrCreateTag('ai-processed');
+    const doc = await client.getDocument(documentId);
+    const processedTagId = await client.getOrCreateTag(config.processing.processedTag);
     const correspondentId = await client.getOrCreateCorrespondent(receipt.vendor);
     
     const currentTags = doc.tags || [];
@@ -60,7 +108,6 @@ export async function processPaperlessDocument(
       currentTags.push(processedTagId);
     }
 
-    // Update tags based on category
     const categoryTagId = await client.getOrCreateTag(receipt.category);
     if (!currentTags.includes(categoryTagId)) {
       currentTags.push(categoryTagId);
@@ -73,20 +120,25 @@ export async function processPaperlessDocument(
       tags: currentTags,
     });
 
-    console.log(`Successfully processed document ${documentId}`);
+    logger.info(`Successfully processed document ${documentId}`);
+    await reporter.report('receipt:success', { 
+      documentId, 
+      progress: 100, 
+      message: 'Processed successfully',
+      vendor: receipt.vendor,
+      amount: Math.round(receipt.amount * 100),
+      currency: receipt.currency,
+      receiptData: JSON.stringify(receipt)
+    });
     
-    // Success - remove from retry queue if present
-    if (retryQueue) {
-      await retryQueue.remove(documentId);
-    }
-  } catch (error) {
+    if (retryQueue) await retryQueue.remove(documentId);
+  } catch (error: any) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     
     if (retryQueue) {
-      // Check if we should give up (already at max retries)
       if (await retryQueue.shouldGiveUp(documentId)) {
-        // Already at max attempts - tag as failed and remove from queue
-        console.error(`Document ${documentId} failed after ${maxRetries} attempts: ${errorMessage}`);
+        logger.error(`Document ${documentId} failed after ${maxRetries} attempts: ${errorMessage}`);
+        await reporter.report('receipt:failed', { documentId, message: errorMessage, progress: 100 });
         
         if (failedTag) {
           try {
@@ -96,43 +148,21 @@ export async function processPaperlessDocument(
             if (!currentTags.includes(failedTagId)) {
               currentTags.push(failedTagId);
               await client.updateDocument(documentId, { tags: currentTags });
-              console.log(`Document ${documentId} tagged as "${failedTag}"`);
+              logger.info(`Document ${documentId} tagged as "${failedTag}"`);
             }
           } catch (tagError) {
-            console.error(`Failed to add "${failedTag}" tag to document ${documentId}:`, tagError);
+            logger.error(`Failed to add "${failedTag}" tag to document ${documentId}:`, tagError);
           }
         }
         
         await retryQueue.remove(documentId);
       } else {
-        // Add to retry queue (or increment attempts)
         await retryQueue.add(documentId, errorMessage);
-        
-        // Check if this was the last attempt
-        if (await retryQueue.shouldGiveUp(documentId)) {
-          console.error(`Document ${documentId} failed after ${maxRetries} attempts: ${errorMessage}`);
-          
-          if (failedTag) {
-            try {
-              const failedTagId = await client.getOrCreateTag(failedTag);
-              const doc = await client.getDocument(documentId);
-              const currentTags = doc.tags || [];
-              if (!currentTags.includes(failedTagId)) {
-                currentTags.push(failedTagId);
-                await client.updateDocument(documentId, { tags: currentTags });
-                console.log(`Document ${documentId} tagged as "${failedTag}"`);
-              }
-            } catch (tagError) {
-              console.error(`Failed to add "${failedTag}" tag to document ${documentId}:`, tagError);
-            }
-          }
-          
-          await retryQueue.remove(documentId);
-        }
+        await reporter.report('receipt:retry', { documentId, message: errorMessage, attempts: attemptNum, progress: 0 });
       }
     } else {
-      // No retry queue - just log the error
-      console.error(`Error processing document ${documentId}:`, error);
+      logger.error(`Error processing document ${documentId}:`, errorMessage);
+      await reporter.report('receipt:failed', { documentId, message: errorMessage, progress: 100 });
     }
   }
 }
@@ -143,7 +173,7 @@ export async function runAutomation() {
   try {
     config = loadConfig();
   } catch (error) {
-    console.error('Failed to load configuration:', error);
+    logger.error('Failed to load configuration:', error);
     return;
   }
 
@@ -162,16 +192,17 @@ export async function runAutomation() {
 
   // 1. Process new unprocessed documents first
   const unprocessed = await client.getUnprocessedDocuments(undefined, config.processing.receiptTag);
-  console.log(`Found ${unprocessed.length} unprocessed documents with tag "${config.processing.receiptTag}"`);
+  logger.info(`Found ${unprocessed.length} unprocessed documents with tag "${config.processing.receiptTag}"`);
   
   for (const doc of unprocessed) {
+    await reporter.report('receipt:detected', { documentId: doc.id, fileName: doc.title, status: 'detected', progress: 0 });
     await processPaperlessDocument(client, doc.id, togetherClient, retryQueue, config.processing.failedTag);
   }
 
   // 2. Process documents from retry queue that are ready
   const readyForRetry = await retryQueue.getReadyForRetry();
   if (readyForRetry.length > 0) {
-    console.log(`Processing ${readyForRetry.length} documents from retry queue`);
+    logger.info(`Processing ${readyForRetry.length} documents from retry queue`);
     
     for (const item of readyForRetry) {
       await processPaperlessDocument(client, item.documentId, togetherClient, retryQueue, config.processing.failedTag);

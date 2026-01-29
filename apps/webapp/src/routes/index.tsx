@@ -21,6 +21,10 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useHealth, useConfig } from '@/lib/queries';
+import { useAppEvents } from '@/hooks/use-app-events';
+import { ProcessingList } from '@/components/processing-list';
+import { CliOutput } from '@/components/ui/cli-output';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 
@@ -39,6 +43,7 @@ function DashboardPage() {
   } = useHealth();
 
   const { data: config, isLoading: isConfigLoading } = useConfig();
+  const { processingLogs, appLogs } = useAppEvents();
 
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
@@ -62,13 +67,6 @@ function DashboardPage() {
 
   const isConfigured = health?.checks.config === 'ok';
   const isLoading = isHealthLoading || isConfigLoading;
-  
-  // Handle 503 or other errors by showing what we have or an error state
-  // If health is present even with error (e.g. 503 might return body), we use it.
-  // But useHealth from react-query might default to undefined on error unless configured otherwise.
-  // In the legacy code, it handles 503 specifically. 
-  // Our fetchApi wrapper throws on non-2xx. 
-  // However, we can display partial data if available or just the error state.
 
   if (isLoading && !health) {
     return (
@@ -85,6 +83,19 @@ function DashboardPage() {
   const getStatusVariant = (status: 'ok' | 'error' | undefined) => {
     return status === 'ok' ? 'default' : 'destructive'; // Shadcn badge variants: default, secondary, destructive, outline
   };
+
+  // Filter logs for tabs
+  const workerLogs = appLogs.filter(l => l.source === 'worker' || (l.source === 'core' && l.message.toLowerCase().includes('paperless'))).map(l => ({
+    text: l.message,
+    timestamp: l.timestamp,
+    level: l.level
+  }));
+
+  const apiLogs = appLogs.filter(l => l.source === 'api').map(l => ({
+    text: l.message,
+    timestamp: l.timestamp,
+    level: l.level
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-4 md:p-8">
@@ -191,10 +202,81 @@ function DashboardPage() {
               </p>
             </CardContent>
           </Card>
+
+          {/* Integration Stats Card - Spanning wide screens */}
+          <Card className="md:col-span-2 lg:col-span-3">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                Integration Statistics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {health?.stats ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="space-y-1">
+                    <span className="text-3xl font-bold tracking-tight">{health.stats.detected}</span>
+                    <p className="text-xs text-muted-foreground uppercase font-medium">Detected</p>
+                  </div>
+                  <div className="space-y-1 border-l pl-4">
+                    <span className="text-3xl font-bold tracking-tight text-green-600">{health.stats.processed}</span>
+                    <p className="text-xs text-muted-foreground uppercase font-medium">Processed</p>
+                  </div>
+                  <div className="space-y-1 border-l pl-4">
+                    <span className="text-3xl font-bold tracking-tight text-destructive">{health.stats.failed}</span>
+                    <p className="text-xs text-muted-foreground uppercase font-medium">Failed</p>
+                  </div>
+                  <div className="space-y-1 border-l pl-4">
+                    <span className="text-3xl font-bold tracking-tight text-yellow-600">{health.stats.inQueue}</span>
+                    <p className="text-xs text-muted-foreground uppercase font-medium">In Queue</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-4 text-center text-muted-foreground text-sm">
+                  Waiting for integration data...
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
+        {/* Real-time Activity Section */}
+        <ProcessingList logs={processingLogs} />
+
+        {/* System Logs Section */}
+        <section className="space-y-4 pt-8 border-t">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">System Logs</h2>
+            </div>
+          </div>
+          
+          <Tabs defaultValue="worker" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="worker">Worker Output</TabsTrigger>
+              <TabsTrigger value="api">API Output</TabsTrigger>
+            </TabsList>
+            <TabsContent value="worker">
+              <CliOutput 
+                output={workerLogs} 
+                showTimestamps 
+                prompt=">"
+                className="border-zinc-800 shadow-xl"
+              />
+            </TabsContent>
+            <TabsContent value="api">
+              <CliOutput 
+                output={apiLogs} 
+                showTimestamps 
+                prompt="$"
+                className="border-zinc-800 shadow-xl"
+              />
+            </TabsContent>
+          </Tabs>
+        </section>
+
         {/* Detailed Status Section */}
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7 pt-8 border-t">
           {/* Health Checks Detail */}
           <Card className="col-span-1 lg:col-span-4">
             <CardHeader>
@@ -233,7 +315,7 @@ function DashboardPage() {
                       LLM service for OCR processing
                     </p>
                   </div>
-                   <Badge
+                  <Badge
                     variant={getStatusVariant(health?.checks.togetherAiConnection)}
                      className={health?.checks.togetherAiConnection === 'ok' ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-red-100 text-red-800 hover:bg-red-200"}
                   >

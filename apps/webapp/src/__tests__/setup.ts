@@ -95,6 +95,11 @@ export const mockHealthData = {
       togetherAiConnection: 'ok' as const,
       config: 'ok' as const,
     },
+    stats: {
+      detected: 10,
+      processed: 8,
+      inQueue: 2,
+    },
   },
   unhealthy: {
     status: 'unhealthy' as const,
@@ -104,7 +109,13 @@ export const mockHealthData = {
       togetherAiConnection: 'error' as const,
       config: 'error' as const,
     },
-    errors: ['Paperless connection failed', 'Together AI key invalid'],
+    stats: {
+      detected: 10,
+      processed: 5,
+      failed: 5,
+      inQueue: 5,
+    },
+    errors: ['Paperless connection/stats failed', 'Together AI key invalid'],
   },
 }
 

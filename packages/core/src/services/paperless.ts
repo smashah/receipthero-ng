@@ -45,12 +45,23 @@ export class PaperlessClient {
     const existing = tags.find((t: any) => t.name.toLowerCase() === name.toLowerCase());
     if (existing) return existing.id;
 
-    const res = await this.fetchApi("/tags/", {
-      method: "POST",
-      body: JSON.stringify({ name, color: "#00FF00" }),
-    });
-    const data = await res.json() as any;
-    return data.id;
+    try {
+      const res = await this.fetchApi("/tags/", {
+        method: "POST",
+        body: JSON.stringify({ name, color: "#00FF00" }),
+      });
+      const data = await res.json() as any;
+      return data.id;
+    } catch (error: any) {
+      // If it fails with a unique constraint error, try to fetch again
+      // The object might have been created by another process
+      if (error.message?.includes("unique constraint") || error.message?.includes("400")) {
+        const retryTags = await this.getTags();
+        const retryExisting = retryTags.find((t: any) => t.name.toLowerCase() === name.toLowerCase());
+        if (retryExisting) return retryExisting.id;
+      }
+      throw error;
+    }
   }
 
   async getOrCreateCorrespondent(name: string): Promise<number> {
@@ -59,12 +70,22 @@ export class PaperlessClient {
     const existing = data.results.find((c: any) => c.name.toLowerCase() === name.toLowerCase());
     if (existing) return existing.id;
 
-    const postRes = await this.fetchApi("/correspondents/", {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    });
-    const postData = await postRes.json() as any;
-    return postData.id;
+    try {
+      const postRes = await this.fetchApi("/correspondents/", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+      const postData = await postRes.json() as any;
+      return postData.id;
+    } catch (error: any) {
+      if (error.message?.includes("unique constraint") || error.message?.includes("400")) {
+        const retryRes = await this.fetchApi(`/correspondents/?name__icontains=${encodeURIComponent(name)}`);
+        const retryData = await retryRes.json() as any;
+        const retryExisting = retryData.results.find((c: any) => c.name.toLowerCase() === name.toLowerCase());
+        if (retryExisting) return retryExisting.id;
+      }
+      throw error;
+    }
   }
 
   async getUnprocessedDocuments(

@@ -1,10 +1,14 @@
 import type { Config } from '@sm-rn/shared/schemas';
+import type { ProcessingLog, ProcessingEvent } from '@sm-rn/shared/types';
 
 // API base URL - defaults to localhost:3001 for development
 export const API_BASE_URL =
   typeof window !== 'undefined' && import.meta.env.VITE_API_URL
     ? import.meta.env.VITE_API_URL
     : 'http://localhost:3001';
+
+// WS base URL
+export const WS_BASE_URL = API_BASE_URL.replace(/^http/, 'ws');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -18,11 +22,34 @@ export interface HealthStatus {
     togetherAiConnection: 'ok' | 'error';
     config: 'ok' | 'error';
   };
+  stats?: {
+    detected: number;
+    processed: number;
+    failed: number;
+    inQueue: number;
+  };
   errors?: string[];
 }
 
 export interface ApiError {
   error: string;
+}
+
+export interface ZodIssue {
+  code: string;
+  path: (string | number)[];
+  message: string;
+  expected?: string;
+  received?: string;
+}
+
+export interface ApiErrorResponse {
+  success: false;
+  error: {
+    name: string;
+    message: string;
+    issues?: ZodIssue[];
+  };
 }
 
 export interface SaveConfigResponse {
@@ -36,8 +63,8 @@ export interface TestConnectionResponse {
   error?: string;
 }
 
-// Re-export Config type for convenience
-export type { Config };
+// Re-export shared types for convenience
+export type { Config, ProcessingLog, ProcessingEvent };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Query Key Factories
@@ -61,10 +88,59 @@ export class FetchError extends Error {
   constructor(
     public status: number,
     public statusText: string,
-    public data?: ApiError
+    public data?: ApiErrorResponse | ApiError
   ) {
-    super(data?.error || `${status} ${statusText}`);
+    const message = FetchError.extractMessage(data) || `${status} ${statusText}`;
+    super(message);
     this.name = 'FetchError';
+  }
+
+  private static extractMessage(data: ApiErrorResponse | ApiError | undefined): string | undefined {
+    if (!data) return undefined;
+    if ('error' in data && typeof data.error === 'object') {
+      const { message } = data.error;
+      // If message is a stringified JSON array (common for Zod errors in some frameworks)
+      if (typeof message === 'string' && message.startsWith('[') && message.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(message);
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].message) {
+            return parsed[0].message;
+          }
+        } catch {
+          // Fallback to original message
+        }
+      }
+      return message;
+    }
+    if ('error' in data && typeof data.error === 'string') {
+      return data.error;
+    }
+    return undefined;
+  }
+
+  get validationIssues(): ZodIssue[] | undefined {
+    if (this.data && 'error' in this.data && typeof this.data.error === 'object') {
+      const { issues, message } = this.data.error;
+      if (issues) return issues;
+      
+      // Try to parse issues from message string
+      if (typeof message === 'string' && message.startsWith('[') && message.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(message);
+          if (Array.isArray(parsed)) return parsed as ZodIssue[];
+        } catch {
+          return undefined;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  get isValidationError(): boolean {
+    if (this.data && 'error' in this.data && typeof this.data.error === 'object') {
+      return ['ValidationError', 'ZodError'].includes(this.data.error.name);
+    }
+    return false;
   }
 }
 

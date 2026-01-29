@@ -8,18 +8,57 @@ import { createTestQueryClient, mockHealthData, mockConfigData } from './setup'
 vi.mock('../lib/queries', () => ({
   useHealth: vi.fn(),
   useConfig: vi.fn(),
+  useProcessingLogs: vi.fn(),
+  useAppLogs: vi.fn(),
+}))
+
+// Mock the events hook
+vi.mock('../hooks/use-app-events', () => ({
+  useAppEvents: vi.fn(),
 }))
 
 // Import after mocking
-import { useHealth, useConfig } from '../lib/queries'
+import { useHealth, useConfig, useProcessingLogs, useAppLogs } from '../lib/queries'
+import { useAppEvents } from '../hooks/use-app-events'
 // Import the Route to get the component
 import { Route } from '../routes/index'
 
 const mockUseHealth = useHealth as ReturnType<typeof vi.fn>
 const mockUseConfig = useConfig as ReturnType<typeof vi.fn>
+const mockUseProcessingLogs = useProcessingLogs as ReturnType<typeof vi.fn>
+const mockUseAppLogs = useAppLogs as ReturnType<typeof vi.fn>
+const mockUseAppEvents = useAppEvents as ReturnType<typeof vi.fn>
 
 // Get the component from the Route
 const DashboardPage = Route.options.component!
+
+function setupDefaultMocks() {
+  mockUseHealth.mockReturnValue({
+    data: mockHealthData.healthy,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    dataUpdatedAt: Date.now(),
+  })
+  mockUseConfig.mockReturnValue({
+    data: mockConfigData.default,
+    isLoading: false,
+  })
+  mockUseProcessingLogs.mockReturnValue({
+    data: [],
+    isLoading: false,
+  })
+  mockUseAppLogs.mockReturnValue({
+    data: [],
+    isLoading: false,
+  })
+  mockUseAppEvents.mockReturnValue({
+    processingLogs: [],
+    appLogs: [],
+    isLoading: false,
+  })
+}
 
 function renderDashboard() {
   const queryClient = createTestQueryClient()
@@ -37,6 +76,7 @@ describe('Dashboard Page', () => {
   })
 
   it('renders loading skeleton initially', async () => {
+    setupDefaultMocks()
     mockUseHealth.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -44,10 +84,6 @@ describe('Dashboard Page', () => {
       error: null,
       refetch: vi.fn(),
       dataUpdatedAt: 0,
-    })
-    mockUseConfig.mockReturnValue({
-      data: undefined,
-      isLoading: true,
     })
 
     renderDashboard()
@@ -57,18 +93,7 @@ describe('Dashboard Page', () => {
   })
 
   it('displays health data when loaded', async () => {
-    mockUseHealth.mockReturnValue({
-      data: mockHealthData.healthy,
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: vi.fn(),
-      dataUpdatedAt: Date.now(),
-    })
-    mockUseConfig.mockReturnValue({
-      data: mockConfigData.default,
-      isLoading: false,
-    })
+    setupDefaultMocks()
 
     renderDashboard()
 
@@ -78,13 +103,14 @@ describe('Dashboard Page', () => {
     // Should show connected status for Paperless
     expect(screen.getByText('Connected')).toBeInTheDocument()
 
-    // Should show processing tags from config
-    expect(screen.getByText('receipt')).toBeInTheDocument()
-    expect(screen.getByText('ai-processed')).toBeInTheDocument()
-    expect(screen.getByText('ai-failed')).toBeInTheDocument()
+    // Should show integration stats
+    expect(screen.getByText(/integration statistics/i)).toBeInTheDocument()
+    expect(screen.getByText('Detected')).toBeInTheDocument()
+    expect(screen.getByText('Processed')).toBeInTheDocument()
   })
 
   it('shows error state on API failure', async () => {
+    setupDefaultMocks()
     mockUseHealth.mockReturnValue({
       data: mockHealthData.unhealthy,
       isLoading: false,
@@ -93,10 +119,6 @@ describe('Dashboard Page', () => {
       refetch: vi.fn(),
       dataUpdatedAt: Date.now(),
     })
-    mockUseConfig.mockReturnValue({
-      data: mockConfigData.default,
-      isLoading: false,
-    })
 
     renderDashboard()
 
@@ -104,11 +126,11 @@ describe('Dashboard Page', () => {
     expect(screen.getByText('Unhealthy')).toBeInTheDocument()
 
     // Should show error messages
-    expect(screen.getByText(/Paperless connection failed/i)).toBeInTheDocument()
-    expect(screen.getByText(/Together AI key invalid/i)).toBeInTheDocument()
+    expect(screen.getByText(/Paperless connection\/stats failed/i)).toBeInTheDocument()
   })
 
   it('refresh button triggers refetch', async () => {
+    setupDefaultMocks()
     const mockRefetch = vi.fn()
     mockUseHealth.mockReturnValue({
       data: mockHealthData.healthy,
@@ -117,10 +139,6 @@ describe('Dashboard Page', () => {
       error: null,
       refetch: mockRefetch,
       dataUpdatedAt: Date.now(),
-    })
-    mockUseConfig.mockReturnValue({
-      data: mockConfigData.default,
-      isLoading: false,
     })
 
     renderDashboard()

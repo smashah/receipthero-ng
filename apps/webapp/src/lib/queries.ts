@@ -7,6 +7,7 @@ import {
   type Config,
   type SaveConfigResponse,
   type TestConnectionResponse,
+  type ProcessingLog,
 } from './api';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,6 +27,44 @@ export function useHealth() {
     refetchIntervalInBackground: false,
     // Also consider stale immediately for fresh data on focus
     staleTime: 0,
+  });
+}
+
+/**
+ * Fetches recent processing logs.
+ */
+export function useProcessingLogs() {
+  return useQuery({
+    queryKey: ['processing-logs'],
+    queryFn: () => fetchApi<ProcessingLog[]>('/api/events'),
+  });
+}
+
+/**
+ * Fetches historical app logs.
+ */
+export function useAppLogs(source?: string) {
+  return useQuery({
+    queryKey: ['app-logs', source],
+    queryFn: () => fetchApi<LogEntry[]>(`/api/events/logs${source ? `?source=${source}` : ''}`),
+  });
+}
+
+/**
+ * Triggers a manual retry for a document.
+ */
+export function useRetryProcessing() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, strategy }: { id: number; strategy: 'full' | 'partial' }) =>
+      fetchApi<any>(`/api/processing/${id}/retry`, {
+        method: 'POST',
+        body: JSON.stringify({ strategy }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['processing-logs'] });
+    },
   });
 }
 
@@ -51,9 +90,9 @@ export function useSaveConfig() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (config: Config) =>
+    mutationFn: (config: Partial<Config>) =>
       fetchApi<SaveConfigResponse>('/api/config', {
-        method: 'POST',
+        method: 'PATCH',
         body: JSON.stringify(config),
       }),
     onSuccess: () => {
@@ -65,25 +104,27 @@ export function useSaveConfig() {
 }
 
 /**
- * Tests Paperless NGX connection with current config.
+ * Tests Paperless NGX connection with provided host and apiKey.
  */
 export function useTestPaperless() {
   return useMutation({
-    mutationFn: () =>
+    mutationFn: (data: { host: string; apiKey: string }) =>
       fetchApi<TestConnectionResponse>('/api/config/test-paperless', {
         method: 'POST',
+        body: JSON.stringify(data),
       }),
   });
 }
 
 /**
- * Tests Together AI connection with current API key.
+ * Tests Together AI connection with provided apiKey.
  */
 export function useTestTogether() {
   return useMutation({
-    mutationFn: () =>
+    mutationFn: (data: { apiKey: string }) =>
       fetchApi<TestConnectionResponse>('/api/config/test-together', {
         method: 'POST',
+        body: JSON.stringify(data),
       }),
   });
 }

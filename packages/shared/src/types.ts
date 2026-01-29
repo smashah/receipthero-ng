@@ -63,3 +63,65 @@ export interface SpendingCategory {
 export interface SpendingBreakdown {
   categories: SpendingCategory[];
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Processing Events & Logs
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ProcessingStatus = 'detected' | 'processing' | 'completed' | 'failed' | 'retrying';
+
+export interface ProcessingLog {
+  id: number;
+  documentId: number;
+  status: ProcessingStatus;
+  message?: string;
+  progress: number;
+  attempts: number;
+  fileName?: string;
+  vendor?: string;
+  amount?: number;
+  currency?: string;
+  receiptData?: string; // Full extracted JSON string
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ProcessingEventType = 
+  | 'receipt:detected' 
+  | 'receipt:processing' 
+  | 'receipt:success' 
+  | 'receipt:failed' 
+  | 'receipt:retry';
+
+export interface ProcessingEvent {
+  type: ProcessingEventType;
+  payload: Partial<ProcessingLog> & { documentId: number };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Logging Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogSource = 'worker' | 'api' | 'core';
+
+export interface LogEntry {
+  id?: number;
+  timestamp: string;
+  level: LogLevel;
+  source: LogSource;
+  message: string;
+  context?: string; // JSON string
+}
+
+export interface LogEvent {
+  type: 'log:entry';
+  payload: LogEntry;
+}
+
+export type AppEventType = ProcessingEventType | 'log:entry';
+
+export interface AppEvent {
+  type: AppEventType;
+  payload: any;
+}

@@ -6,3 +6,5 @@ export * from './services/ocr';
 export * from './services/paperless';
 export * from './services/retry-queue';
 export * from './services/together-client';
+export * from './services/reporter';
+export * from './services/logger';

@@ -1,35 +1,36 @@
-import { runAutomation, loadConfig } from '@sm-rn/core';
+import { runAutomation, loadConfig, createLogger } from '@sm-rn/core';
 
+const logger = createLogger('worker');
 let isShuttingDown = false;
 let currentRunPromise: Promise<void> | null = null;
 
 async function workerLoop() {
-  console.log('🤖 Starting ReceiptHero Paperless-NGX Integration Worker...');
+  logger.info('🤖 Starting ReceiptHero Paperless-NGX Integration Worker...');
 
   while (!isShuttingDown) {
     try {
       const config = loadConfig();
       const scanInterval = config.processing.scanInterval;
 
-      console.log(`\n📋 Running automation cycle...`);
+      logger.info(`📋 Running automation cycle...`);
       currentRunPromise = runAutomation();
       await currentRunPromise;
       currentRunPromise = null;
 
       if (!isShuttingDown) {
-        console.log(`⏱️  Waiting ${scanInterval / 1000}s until next scan...`);
+        logger.info(`⏱️  Waiting ${scanInterval / 1000}s until next scan...`);
         await sleep(scanInterval);
       }
-    } catch (error) {
-      console.error('❌ Worker error:', error);
+    } catch (error: any) {
+      logger.error('❌ Worker error:', error.message || error);
       if (!isShuttingDown) {
-        console.log('⏱️  Waiting 60s before retry...');
+        logger.info('⏱️  Waiting 60s before retry...');
         await sleep(60000);
       }
     }
   }
 
-  console.log('✅ Worker shutdown complete');
+  logger.info('✅ Worker shutdown complete');
 }
 
 function sleep(ms: number): Promise<void> {

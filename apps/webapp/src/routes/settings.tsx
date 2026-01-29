@@ -21,7 +21,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '../components/ui/card'
@@ -33,7 +32,8 @@ import {
   useTestPaperless, 
   useTestTogether 
 } from '../lib/queries'
-import type { Config } from '@sm-rn/shared'
+import { FetchError, type ZodIssue } from '../lib/api'
+import { type Config, PartialConfigSchema } from '@sm-rn/shared/schemas'
 
 export const Route = createFileRoute('/settings')({
   component: SettingsPage,
@@ -45,6 +45,8 @@ function SettingsPage() {
   const saveConfigMutation = useSaveConfig()
   const testPaperlessMutation = useTestPaperless()
   const testTogetherMutation = useTestTogether()
+
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const [localConfig, setLocalConfig] = useState<Config>({
     paperless: { host: '', apiKey: '' },
@@ -79,6 +81,11 @@ function SettingsPage() {
       ...prev,
       paperless: { ...prev.paperless, [field]: value }
     }))
+    setErrors(prev => {
+      const next = { ...prev }
+      delete next[`paperless.${field}`]
+      return next
+    })
   }
 
   const handleTogetherChange = (field: keyof Config['togetherAi'], value: string) => {
@@ -86,6 +93,11 @@ function SettingsPage() {
       ...prev,
       togetherAi: { ...prev.togetherAi, [field]: value }
     }))
+    setErrors(prev => {
+      const next = { ...prev }
+      delete next[`togetherAi.${field}`]
+      return next
+    })
   }
 
   const handleProcessingChange = (field: keyof Config['processing'], value: string | number) => {
@@ -93,6 +105,11 @@ function SettingsPage() {
       ...prev,
       processing: { ...prev.processing, [field]: value }
     }))
+    setErrors(prev => {
+      const next = { ...prev }
+      delete next[`processing.${field}`]
+      return next
+    })
   }
 
   const handleRateLimitChange = (field: keyof NonNullable<Config['rateLimit']>, value: any) => {
@@ -100,6 +117,11 @@ function SettingsPage() {
       ...prev,
       rateLimit: { ...prev.rateLimit!, [field]: value }
     }))
+    setErrors(prev => {
+      const next = { ...prev }
+      delete next[`rateLimit.${field}`]
+      return next
+    })
   }
 
   const handleObservabilityChange = (field: keyof NonNullable<Config['observability']>, value: any) => {
@@ -107,6 +129,11 @@ function SettingsPage() {
       ...prev,
       observability: { ...prev.observability!, [field]: value }
     }))
+    setErrors(prev => {
+      const next = { ...prev }
+      delete next[`observability.${field}`]
+      return next
+    })
   }
 
   const handleTestPaperless = async () => {
@@ -116,7 +143,7 @@ function SettingsPage() {
     }
 
     try {
-      const result = await testPaperlessMutation.mutateAsync()
+      const result = await testPaperlessMutation.mutateAsync(localConfig.paperless)
       if (result.success) {
         toast.success(result.message || 'Connection successful!')
       } else {
@@ -134,7 +161,9 @@ function SettingsPage() {
     }
 
     try {
-      const result = await testTogetherMutation.mutateAsync()
+      const result = await testTogetherMutation.mutateAsync({
+        apiKey: localConfig.togetherAi.apiKey
+      })
       if (result.success) {
         toast.success(result.message || 'API key looks good!')
       } else {
@@ -151,45 +180,55 @@ function SettingsPage() {
   }
 
   const handleSave = async () => {
-    // Validation
-    if (!localConfig.paperless.host) {
-      toast.error('Paperless Host is required')
-      return
-    }
-    try {
-      new URL(localConfig.paperless.host)
-    } catch {
-      toast.error('Invalid Paperless Host URL')
-      return
-    }
+    setErrors({})
     
-    if (!localConfig.paperless.apiKey) {
-      toast.error('Paperless API Key is required')
-      return
-    }
-
-    if (!localConfig.togetherAi.apiKey) {
-      toast.error('Together AI API Key is required')
-      return
-    }
-
-    // Prepare payload - omit masked fields
+    // Prepare payload - omit masked fields (they'll be preserved by API)
     const payload = JSON.parse(JSON.stringify(localConfig))
 
-    if (isMasked(payload.paperless.apiKey)) {
+    // Remove masked values - API will preserve existing
+    if (isMasked(payload.paperless?.apiKey)) {
       delete payload.paperless.apiKey
     }
-
-    if (isMasked(payload.togetherAi.apiKey)) {
+    if (isMasked(payload.togetherAi?.apiKey)) {
       delete payload.togetherAi.apiKey
     }
-    
     if (payload.rateLimit && isMasked(payload.rateLimit.upstashToken)) {
       delete payload.rateLimit.upstashToken
     }
-    
     if (payload.observability && isMasked(payload.observability.heliconeApiKey)) {
       delete payload.observability.heliconeApiKey
+    }
+
+    // Clean up empty nested objects
+    if (payload.paperless && Object.keys(payload.paperless).length === 0) {
+      delete payload.paperless
+    }
+    if (payload.togetherAi && Object.keys(payload.togetherAi).length === 0) {
+      delete payload.togetherAi
+    }
+
+    // Client-side validation using the same schema as API (PartialConfigSchema)
+    const validation = PartialConfigSchema.safeParse(payload)
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {}
+      validation.error.issues.forEach((issue) => {
+        const path = issue.path.join('.')
+        newErrors[path] = issue.message
+      })
+      setErrors(newErrors)
+      
+      const firstIssue = validation.error.issues[0]
+      const fieldLabel = firstIssue.path
+        .map(p => {
+          const s = String(p)
+          if (s === 'apiKey') return 'API Key'
+          if (s === 'togetherAi') return 'Together AI'
+          return s.charAt(0).toUpperCase() + s.slice(1)
+        })
+        .join(' ')
+      
+      toast.error(`${fieldLabel}: ${firstIssue.message}`)
+      return
     }
 
     try {
@@ -197,8 +236,50 @@ function SettingsPage() {
       toast.success('Configuration saved successfully!')
       navigate({ to: '/' })
     } catch (error) {
-      toast.error('Failed to save configuration')
+      if (error instanceof FetchError && error.isValidationError) {
+        // Handle validation errors with field-specific messages from API
+        const issues = error.validationIssues
+        if (issues && issues.length > 0) {
+          const newErrors: Record<string, string> = {}
+          issues.forEach((issue: ZodIssue) => {
+            const path = issue.path.join('.')
+            newErrors[path] = issue.message
+          })
+          setErrors(newErrors)
+
+          // Show first validation error in toast (human readable)
+          const firstIssue = issues[0]
+          const fieldLabel = firstIssue.path
+            .map(p => {
+              const s = String(p)
+              if (s === 'apiKey') return 'API Key'
+              if (s === 'togetherAi') return 'Together AI'
+              if (s === 'upstashUrl') return 'Upstash URL'
+              if (s === 'upstashToken') return 'Upstash Token'
+              if (s === 'heliconeApiKey') return 'Helicone API Key'
+              return s.charAt(0).toUpperCase() + s.slice(1)
+            })
+            .join(' ')
+          
+          toast.error(`${fieldLabel}: ${firstIssue.message}`)
+        } else {
+          toast.error(error.message || 'Validation failed')
+        }
+      } else if (error instanceof FetchError) {
+        toast.error(error.message || 'Failed to save configuration')
+      } else {
+        toast.error('Failed to save configuration')
+      }
     }
+  }
+
+  const ErrorMessage = ({ path }: { path: string }) => {
+    if (!errors[path]) return null
+    return (
+      <p className="text-xs font-medium text-destructive mt-1">
+        {errors[path]}
+      </p>
+    )
   }
 
   if (isLoadingConfig) {
@@ -266,7 +347,9 @@ function SettingsPage() {
                   placeholder="http://192.168.1.100:8000"
                   value={localConfig.paperless.host}
                   onChange={(e) => handlePaperlessChange('host', e.target.value)}
+                  className={errors['paperless.host'] ? 'border-destructive' : ''}
                 />
+                <ErrorMessage path="paperless.host" />
                 <p className="text-xs text-muted-foreground">
                   The full URL to your Paperless-NGX instance (including port)
                 </p>
@@ -280,7 +363,9 @@ function SettingsPage() {
                   placeholder="Paste your API token here"
                   value={localConfig.paperless.apiKey}
                   onChange={(e) => handlePaperlessChange('apiKey', e.target.value)}
+                  className={errors['paperless.apiKey'] ? 'border-destructive' : ''}
                 />
+                <ErrorMessage path="paperless.apiKey" />
               </div>
             </div>
 
@@ -315,7 +400,9 @@ function SettingsPage() {
                   placeholder="Paste your Together AI API key"
                   value={localConfig.togetherAi.apiKey}
                   onChange={(e) => handleTogetherChange('apiKey', e.target.value)}
+                  className={errors['togetherAi.apiKey'] ? 'border-destructive' : ''}
                 />
+                <ErrorMessage path="togetherAi.apiKey" />
               </div>
             </div>
 
@@ -335,7 +422,9 @@ function SettingsPage() {
                     type="number"
                     value={localConfig.processing.scanInterval}
                     onChange={(e) => handleProcessingChange('scanInterval', parseInt(e.target.value) || 0)}
+                    className={errors['processing.scanInterval'] ? 'border-destructive' : ''}
                   />
+                  <ErrorMessage path="processing.scanInterval" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="max-retries">Max Retries</Label>
@@ -344,10 +433,30 @@ function SettingsPage() {
                     type="number"
                     value={localConfig.processing.maxRetries}
                     onChange={(e) => handleProcessingChange('maxRetries', parseInt(e.target.value) || 0)}
+                    className={errors['processing.maxRetries'] ? 'border-destructive' : ''}
                   />
+                  <ErrorMessage path="processing.maxRetries" />
                 </div>
               </div>
               
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="retry-strategy">Retry Strategy</Label>
+                  <select
+                    id="retry-strategy"
+                    value={localConfig.processing.retryStrategy}
+                    onChange={(e) => handleProcessingChange('retryStrategy', e.target.value as any)}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="partial">Partial (Reuse AI Data)</option>
+                    <option value="full">Full (Redo AI Extraction)</option>
+                  </select>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Partial retries skip AI extraction if receipt data was already captured.
+                  </p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="tag-receipt">Receipt Tag</Label>
@@ -355,7 +464,9 @@ function SettingsPage() {
                     id="tag-receipt"
                     value={localConfig.processing.receiptTag}
                     onChange={(e) => handleProcessingChange('receiptTag', e.target.value)}
+                    className={errors['processing.receiptTag'] ? 'border-destructive' : ''}
                   />
+                  <ErrorMessage path="processing.receiptTag" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tag-processed">Processed Tag</Label>
@@ -363,7 +474,9 @@ function SettingsPage() {
                     id="tag-processed"
                     value={localConfig.processing.processedTag}
                     onChange={(e) => handleProcessingChange('processedTag', e.target.value)}
+                    className={errors['processing.processedTag'] ? 'border-destructive' : ''}
                   />
+                  <ErrorMessage path="processing.processedTag" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tag-failed">Failed Tag</Label>
@@ -371,7 +484,9 @@ function SettingsPage() {
                     id="tag-failed"
                     value={localConfig.processing.failedTag}
                     onChange={(e) => handleProcessingChange('failedTag', e.target.value)}
+                    className={errors['processing.failedTag'] ? 'border-destructive' : ''}
                   />
+                  <ErrorMessage path="processing.failedTag" />
                 </div>
               </div>
             </div>
@@ -414,23 +529,24 @@ function SettingsPage() {
                         <Textarea
                           id="upstash-url"
                           placeholder="https://..."
-                          className="font-mono text-xs"
+                          className={`font-mono text-xs ${errors['rateLimit.upstashUrl'] ? 'border-destructive' : ''}`}
                           rows={2}
                           value={localConfig.rateLimit?.upstashUrl || ''}
                           onChange={(e) => handleRateLimitChange('upstashUrl', e.target.value)}
                         />
+                        <ErrorMessage path="rateLimit.upstashUrl" />
                       </div>
                       <div className="grid gap-2">
                         <Label htmlFor="upstash-token">Upstash Token</Label>
                         <Textarea
                           id="upstash-token"
-                          type="password"
                           placeholder="Secret token"
-                          className="font-mono text-xs"
+                          className={`font-mono text-xs ${errors['rateLimit.upstashToken'] ? 'border-destructive' : ''}`}
                           rows={3}
                           value={localConfig.rateLimit?.upstashToken || ''}
                           onChange={(e) => handleRateLimitChange('upstashToken', e.target.value)}
                         />
+                        <ErrorMessage path="rateLimit.upstashToken" />
                       </div>
                     </div>
                   )}
@@ -463,13 +579,13 @@ function SettingsPage() {
                         <Label htmlFor="helicone-key">Helicone API Key</Label>
                         <Textarea
                           id="helicone-key"
-                          type="password"
                           placeholder="sk-..."
-                          className="font-mono text-xs"
+                          className={`font-mono text-xs ${errors['observability.heliconeApiKey'] ? 'border-destructive' : ''}`}
                           rows={2}
                           value={localConfig.observability?.heliconeApiKey || ''}
                           onChange={(e) => handleObservabilityChange('heliconeApiKey', e.target.value)}
                         />
+                        <ErrorMessage path="observability.heliconeApiKey" />
                       </div>
                     </div>
                   )}

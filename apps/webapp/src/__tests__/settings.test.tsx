@@ -109,8 +109,8 @@ describe('Settings Page', () => {
     const saveButton = screen.getByRole('button', { name: /save configuration/i })
     await userEvent.click(saveButton)
 
-    // Should show validation error via toast
-    expect(toast.error).toHaveBeenCalledWith('Paperless Host is required')
+    // Should show validation error via toast (human-readable with field label)
+    expect(toast.error).toHaveBeenCalledWith('Paperless Host: PAPERLESS_HOST must be a valid URL')
   })
 
   it('connection test button triggers mutation', async () => {
@@ -219,7 +219,7 @@ describe('Settings Page', () => {
 
     // Check that masked values are omitted from payload
     const payload = mockSave.mock.calls[0][0]
-    expect(payload.paperless.apiKey).toBeUndefined()
-    expect(payload.togetherAi.apiKey).toBeUndefined()
+    expect(payload.paperless?.apiKey).toBeUndefined()
+    expect(payload.togetherAi?.apiKey).toBeUndefined()
   })
 })
