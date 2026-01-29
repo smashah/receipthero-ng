@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { loadConfig } from '@sm-rn/core';
-import { PaperlessClient, RetryQueue } from '@sm-rn/core';
+import { loadConfig, workerState } from '@sm-rn/core';
+import { PaperlessClient, RetryQueue, workerStateSchema, skippedDocuments } from '@sm-rn/core';
 
 const health = new Hono();
 
@@ -12,10 +12,16 @@ interface HealthStatus {
     togetherAiConnection: 'ok' | 'error';
     config: 'ok' | 'error';
   };
+  worker?: {
+    isPaused: boolean;
+    pausedAt: string | null;
+    pauseReason: string | null;
+  };
   stats?: {
     detected: number;
     processed: number;
     failed: number;
+    skipped: number;
     inQueue: number;
   };
   errors?: string[];
@@ -32,6 +38,13 @@ health.get('/', async (c) => {
     },
   };
   const errors: string[] = [];
+
+  // Get worker state
+  try {
+    status.worker = await workerState.getState();
+  } catch (error) {
+    // Worker state not critical, continue
+  }
 
   // 1. Config Check
   let config;
@@ -63,7 +76,7 @@ health.get('/', async (c) => {
         apiKey: config.paperless.apiKey,
         processedTagName: config.processing.processedTag,
       });
-      
+
       const tags = await client.getTags();
       const processedTag = tags.find((t: any) => t.name.toLowerCase() === config.processing.processedTag.toLowerCase());
       const receiptTag = tags.find((t: any) => t.name.toLowerCase() === config.processing.receiptTag.toLowerCase());
@@ -100,11 +113,13 @@ health.get('/', async (c) => {
 
       const retryQueue = new RetryQueue(config.processing.maxRetries);
       const inQueueCount = await retryQueue.size();
+      const skippedCount = await skippedDocuments.count();
 
       status.stats = {
         detected: detectedCount,
         processed: processedCount,
         failed: failedCount,
+        skipped: skippedCount,
         inQueue: inQueueCount,
       };
 

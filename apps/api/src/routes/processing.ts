@@ -6,9 +6,11 @@ import {
   PaperlessClient, 
   processPaperlessDocument, 
   createTogetherClient,
-  RetryQueue
+  RetryQueue,
+  createLogger
 } from '@sm-rn/core';
 
+const logger = createLogger('api');
 const processing = new Hono();
 
 const RetrySchema = z.object({
@@ -39,7 +41,7 @@ processing.post('/:id/retry', zValidator('json', RetrySchema), async (c) => {
       config.processing.failedTag,
       strategy
     ).catch(err => {
-      console.error(`Background retry for ${id} failed:`, err);
+      logger.error(`Background retry for document ${id} failed`, err);
     });
 
     return c.json({ success: true, message: `Retry triggered using ${strategy} strategy` });

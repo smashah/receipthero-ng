@@ -8,6 +8,8 @@ import ocr from './routes/ocr'
 import events from './routes/events'
 import documents from './routes/documents'
 import processing from './routes/processing'
+import worker from './routes/worker'
+import queue from './routes/queue'
 import ws from './routes/ws'
 import { websocket } from 'hono/bun'
 import { createLogger } from '@sm-rn/core'
@@ -30,6 +32,8 @@ app.route('/api/ocr', ocr)
 app.route('/api/events', events)
 app.route('/api/documents', documents)
 app.route('/api/processing', processing)
+app.route('/api/worker', worker)
+app.route('/api/queue', queue)
 app.route('/ws', ws)
 
 // Export app and type for RPC

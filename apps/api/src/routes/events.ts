@@ -2,9 +2,10 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { broadcastHub } from '../lib/broadcast';
-import { db, schema } from '@sm-rn/core';
+import { db, schema, createLogger } from '@sm-rn/core';
 import { eq, desc } from 'drizzle-orm';
 
+const logger = createLogger('api');
 const events = new Hono();
 
 const ProcessingEventSchema = z.object({
@@ -131,7 +132,7 @@ events.post('/', zValidator('json', ProcessingEventSchema), async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Failed to process event:', error);
+    logger.error('Failed to process event', error);
     return c.json({ success: false, error: String(error) }, 500);
   }
 });

@@ -18,6 +18,11 @@ function deepMerge(target: any, source: any): any {
   const result = { ...target };
   for (const key in source) {
     if (source[key] !== undefined) {
+      // Skip masked API keys (placeholders containing '...')
+      if (typeof source[key] === 'string' && source[key].includes('...')) {
+        continue;
+      }
+
       if (
         typeof source[key] === 'object' &&
         source[key] !== null &&
