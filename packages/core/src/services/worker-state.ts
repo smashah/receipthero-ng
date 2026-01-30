@@ -101,6 +101,47 @@ export class WorkerStateService {
       .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
       .run();
   }
+
+  /**
+   * Request an immediate scan. The worker will pick this up and run a scan.
+   */
+  async triggerScan(): Promise<void> {
+    await this.initialize();
+
+    await db
+      .update(schema.workerStateSchema)
+      .set({
+        scanRequested: true,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+      .run();
+  }
+
+  /**
+   * Check if a scan was requested and consume the request.
+   * Returns true if a scan was requested (and clears the flag).
+   */
+  async consumeScanRequest(): Promise<boolean> {
+    const state = await db
+      .select()
+      .from(schema.workerStateSchema)
+      .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+      .get();
+
+    if (state?.scanRequested) {
+      await db
+        .update(schema.workerStateSchema)
+        .set({
+          scanRequested: false,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+        .run();
+      return true;
+    }
+    return false;
+  }
 }
 
 // Singleton instance

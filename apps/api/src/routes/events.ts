@@ -24,12 +24,35 @@ events.get('/logs', async (c) => {
       .from(schema.logs)
       .orderBy(desc(schema.logs.timestamp))
       .limit(limit);
-    
+
     if (source) {
       query = query.where(eq(schema.logs.source, source));
     }
 
     const logs = await query.all();
+    return c.json(logs);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// GET /api/events/logs/document/:documentId - Get logs for a specific document
+events.get('/logs/document/:documentId', async (c) => {
+  const documentId = parseInt(c.req.param('documentId'), 10);
+  const limit = parseInt(c.req.query('limit') || '100', 10);
+
+  if (isNaN(documentId)) {
+    return c.json({ error: 'Invalid documentId' }, 400);
+  }
+
+  try {
+    const logs = await db
+      .select()
+      .from(schema.logs)
+      .where(eq(schema.logs.documentId, documentId))
+      .orderBy(desc(schema.logs.timestamp))
+      .limit(limit)
+      .all();
     return c.json(logs);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -65,6 +88,7 @@ events.post('/', zValidator('json', ProcessingEventSchema), async (c) => {
         source: payload.source,
         message: payload.message,
         context: payload.context,
+        documentId: payload.documentId, // Include documentId if present
       }).run();
 
       // 2. Broadcast to WS
@@ -82,7 +106,7 @@ events.post('/', zValidator('json', ProcessingEventSchema), async (c) => {
       .get();
 
     const now = new Date().toISOString();
-    
+
     // Status mapping from event type
     let status = payload.status || 'processing';
     if (type === 'receipt:detected') status = 'detected';

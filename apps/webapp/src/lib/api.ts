@@ -101,6 +101,7 @@ export interface TestConnectionResponse {
 
 // Re-export shared types for convenience
 export type { Config, ProcessingLog, ProcessingEvent };
+export type { LogEntry, AppEvent } from '@sm-rn/shared/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Query Key Factories
@@ -168,7 +169,7 @@ export class FetchError extends Error {
     if (this.data && 'error' in this.data && typeof this.data.error === 'object') {
       const { issues, message } = this.data.error;
       if (issues) return issues;
-      
+
       // Try to parse issues from message string
       if (typeof message === 'string' && message.startsWith('[') && message.endsWith(']')) {
         try {

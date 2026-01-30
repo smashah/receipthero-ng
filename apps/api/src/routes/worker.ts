@@ -53,4 +53,17 @@ worker.post('/resume', async (c) => {
   }
 });
 
+// POST /api/worker/scan - Trigger an immediate scan
+worker.post('/scan', async (c) => {
+  try {
+    await workerState.triggerScan();
+    return c.json({
+      success: true,
+      message: 'Scan triggered',
+    });
+  } catch (error) {
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
 export default worker;

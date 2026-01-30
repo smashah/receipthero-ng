@@ -6,7 +6,7 @@ let currentRunPromise: Promise<void> | null = null;
 
 async function workerLoop() {
   logger.lifecycle('🚀', 'Starting ReceiptHero Paperless-NGX Integration Worker...');
-  
+
   // Initialize worker state on startup
   await workerState.initialize();
 
@@ -24,14 +24,36 @@ async function workerLoop() {
         continue;
       }
 
-      logger.info('Running automation cycle...');
+      // Check if a scan was manually triggered
+      const wasTriggered = await workerState.consumeScanRequest();
+      if (wasTriggered) {
+        logger.info('📡 Manual scan triggered, running automation cycle immediately...');
+      } else {
+        logger.info('Running automation cycle...');
+      }
+
       currentRunPromise = runAutomation();
       await currentRunPromise;
       currentRunPromise = null;
 
       if (!isShuttingDown) {
-        logger.info(`Waiting ${scanInterval / 1000}s until next scan...`);
-        await sleep(scanInterval);
+        // Use shorter interval if waiting for potential manual triggers
+        const checkInterval = Math.min(scanInterval, 5000); // Check every 5s max
+        const iterations = Math.ceil(scanInterval / checkInterval);
+
+        for (let i = 0; i < iterations && !isShuttingDown; i++) {
+          // Check for manual scan trigger during wait
+          const triggered = await workerState.consumeScanRequest();
+          if (triggered) {
+            logger.info('📡 Manual scan triggered during wait, running now...');
+            break;
+          }
+
+          if (i === 0) {
+            logger.info(`Waiting ${scanInterval / 1000}s until next scan...`);
+          }
+          await sleep(checkInterval);
+        }
       }
     } catch (error: any) {
       logger.error('Worker error', error.message || error);

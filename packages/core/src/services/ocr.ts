@@ -60,11 +60,20 @@ LINE ITEMS:
 - Examples: [{"name": "Grande Latte", "quantity": 1, "unitPrice": 5.75, "totalPrice": 5.75}]
 
 SUGGESTED TAGS:
-- Generate 2-5 relevant tags that describe what this receipt is for
+- Generate 3-8 relevant tags that describe this receipt AND its visual context
 - Tags should be lowercase, single words or hyphenated phrases
-- Consider: vendor type, purchase type, location, payment method, etc.
-- Examples: "fuel", "coffee", "groceries", "electronics", "hotel", "restaurant", "office-supplies"
+- Include TWO types of tags:
+  1. RECEIPT TAGS: Tags about the purchase itself (vendor type, purchase category, payment method)
+     Examples: "fuel", "coffee", "groceries", "electronics", "hotel", "restaurant", "office-supplies"
+  2. CONTEXT TAGS: Tags about the environment/location visible in the image
+     - If the receipt is at a gas pump, add tags like: "car", "vehicle", "fuel-pump", "petrol"
+     - If visible in a restaurant setting: "dining-out", "table"
+     - If at a shopping mall: "mall", "shopping-center"
+     - If outdoors: "outdoor", "street"
+     - If in a car: "car", "vehicle", "in-car"
+     - Add any other context clues visible in the image background
 - Be specific - prefer "fuel" over "gas-station", prefer "coffee" over "food"
+- Look beyond just the receipt text - examine the entire image for context clues
 
 CATEGORIZATION RULES:
 - Grocery stores (Walmart, Target, Kroger, Safeway, Whole Foods, Trader Joe's, Costco, Sam's Club, Aldi, Publix, Wegmans): "groceries"

@@ -37,6 +37,7 @@ export const logs = sqliteTable('logs', {
   source: text('source').notNull(), // 'worker', 'api', 'core'
   message: text('message').notNull(),
   context: text('context'), // JSON string
+  documentId: integer('documentId'), // Optional: links log to a specific document
 });
 
 export type LogEntryRow = typeof logs.$inferSelect;
@@ -48,6 +49,7 @@ export const workerStateSchema = sqliteTable('worker_state', {
   isPaused: integer('isPaused', { mode: 'boolean' }).notNull().default(false),
   pausedAt: text('pausedAt'), // ISO date string when paused
   pauseReason: text('pauseReason'), // Optional reason for pause
+  scanRequested: integer('scanRequested', { mode: 'boolean' }).notNull().default(false), // Flag to trigger immediate scan
   updatedAt: text('updatedAt').notNull(),
 });
 

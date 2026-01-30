@@ -14,6 +14,53 @@ import { eq, desc } from 'drizzle-orm';
 const logger = createLogger('core');
 
 /**
+ * Converts receipt data into a human-readable markdown string.
+ * Used to update the Paperless document content for improved searchability.
+ */
+function receiptToMarkdown(receipt: any): string {
+  const getSymbol = (currencyCode: string) => {
+    const symbols: Record<string, string> = {
+      'GBP': '£',
+      'USD': '$',
+      'EUR': '€',
+      'JPY': '¥',
+      'AED': 'AED ',
+    };
+    return symbols[currencyCode] || currencyCode + ' ';
+  };
+
+  const symbol = getSymbol(receipt.currency);
+
+  // Format line items if available
+  const itemsList = receipt.line_items?.length
+    ? receipt.line_items.map((item: any) =>
+      `* ${item.quantity} x **${item.name}** — ${symbol}${item.unitPrice?.toFixed(2) || item.totalPrice?.toFixed(2) || '?'}`
+    ).join('\n')
+    : '_No line items_';
+
+  // Augment tags with vendor and year for better searchability
+  const year = receipt.date?.split('-')[0] || '';
+  const allTags = [...(receipt.suggested_tags || []), receipt.vendor?.split(' ')[0], year].filter(Boolean);
+
+  return `### **${receipt.vendor}**
+**Date:** ${receipt.date}
+**Category:** ${receipt.category?.charAt(0).toUpperCase() + receipt.category?.slice(1)}
+
+---
+
+**Items Purchased:**
+${itemsList}
+
+---
+
+**Total: ${symbol}${receipt.amount?.toFixed(2)} ${receipt.currency}**
+**Payment Method:** ${receipt.paymentMethod}
+**Tax:** ${symbol}${receipt.taxAmount?.toFixed(2)}
+
+**Search Tags:** ${allTags.join(', ')}`;
+}
+
+/**
  * Process a single document from Paperless-NGX.
  * 
  * Pipeline stages:
@@ -37,17 +84,20 @@ export async function processPaperlessDocument(
   const attemptNum = retryQueue ? await retryQueue.getAttempts(documentId) + 1 : 1;
   const maxRetries = config.processing.maxRetries || 3;
 
-  logger.debug(`[doc:${documentId}] Starting processing`, {
+  // Create a document-scoped logger for this processing job
+  const docLogger = logger.withDocument(documentId);
+
+  docLogger.debug(`Starting processing`, {
     attempt: attemptNum,
     maxRetries,
     strategy: retryStrategy
   });
 
   if (retryQueue && attemptNum > 1) {
-    logger.info(`[doc:${documentId}] Retrying (attempt ${attemptNum}/${maxRetries}) using ${retryStrategy} strategy`);
+    docLogger.info(`Retrying (attempt ${attemptNum}/${maxRetries}) using ${retryStrategy} strategy`);
     await reporter.report('receipt:retry', { documentId, attempts: attemptNum, progress: 0, status: 'retrying' });
   } else {
-    logger.info(`[doc:${documentId}] Processing started`);
+    docLogger.info(`Processing started`);
     await reporter.report('receipt:processing', { documentId, attempts: attemptNum, progress: 5, status: 'processing' });
   }
 
@@ -58,7 +108,7 @@ export async function processPaperlessDocument(
     // STAGE 1: Check for existing receipt data (Partial Retry Optimization)
     // ─────────────────────────────────────────────────────────────────────────
     if (retryStrategy === 'partial') {
-      logger.debug(`[doc:${documentId}] Checking for existing receipt data in DB...`);
+      docLogger.debug(` Checking for existing receipt data in DB...`);
 
       const existing = await db
         .select()
@@ -70,7 +120,7 @@ export async function processPaperlessDocument(
       if (existing?.receiptData) {
         try {
           receipt = JSON.parse(existing.receiptData);
-          logger.info(`[doc:${documentId}] ✓ Reusing existing receipt data from previous extraction`, {
+          docLogger.info(` ✓ Reusing existing receipt data from previous extraction`, {
             vendor: receipt.vendor,
             amount: receipt.amount
           });
@@ -80,10 +130,10 @@ export async function processPaperlessDocument(
             message: 'Reusing existing extraction data'
           });
         } catch (e) {
-          logger.warn(`[doc:${documentId}] Failed to parse existing receipt data, falling back to full extraction`);
+          docLogger.warn(` Failed to parse existing receipt data, falling back to full extraction`);
         }
       } else {
-        logger.debug(`[doc:${documentId}] No existing receipt data found, will perform full extraction`);
+        docLogger.debug(` No existing receipt data found, will perform full extraction`);
       }
     }
 
@@ -92,17 +142,17 @@ export async function processPaperlessDocument(
     // ─────────────────────────────────────────────────────────────────────────
     if (!receipt) {
       // STAGE 2: Get document metadata from Paperless
-      logger.debug(`[doc:${documentId}] Fetching document metadata from Paperless...`);
+      docLogger.debug(` Fetching document metadata from Paperless...`);
       let doc: any;
       try {
         doc = await client.getDocument(documentId);
-        logger.info(`[doc:${documentId}] ✓ Got metadata: "${doc.title}"`, {
+        docLogger.info(` ✓ Got metadata: "${doc.title}"`, {
           correspondent: doc.correspondent,
           tags: doc.tags,
           created: doc.created
         });
       } catch (error: any) {
-        logger.error(`[doc:${documentId}] ✗ Failed to get document metadata`, {
+        docLogger.error(` ✗ Failed to get document metadata`, {
           error: error.message,
           hint: 'Check Paperless connection and document ID'
         });
@@ -111,24 +161,24 @@ export async function processPaperlessDocument(
       await reporter.report('receipt:processing', { documentId, fileName: doc.title, progress: 10 });
 
       // STAGE 3: Download the file (prefer thumbnail for faster OCR)
-      logger.debug(`[doc:${documentId}] Downloading document file...`);
+      docLogger.debug(` Downloading document file...`);
       let fileBuffer: Buffer;
       let fileSource: 'thumbnail' | 'raw';
 
       try {
         fileBuffer = await client.getDocumentThumbnail(documentId);
         fileSource = 'thumbnail';
-        logger.info(`[doc:${documentId}] ✓ Downloaded thumbnail (${(fileBuffer.length / 1024).toFixed(1)} KB)`);
+        docLogger.info(` ✓ Downloaded thumbnail (${(fileBuffer.length / 1024).toFixed(1)} KB)`);
       } catch (thumbError: any) {
-        logger.debug(`[doc:${documentId}] Thumbnail unavailable: ${thumbError.message}`);
-        logger.debug(`[doc:${documentId}] Falling back to raw file download...`);
+        docLogger.debug(` Thumbnail unavailable: ${thumbError.message}`);
+        docLogger.debug(` Falling back to raw file download...`);
 
         try {
           fileBuffer = await client.getDocumentFile(documentId);
           fileSource = 'raw';
-          logger.info(`[doc:${documentId}] ✓ Downloaded raw file (${(fileBuffer.length / 1024).toFixed(1)} KB)`);
+          docLogger.info(` ✓ Downloaded raw file (${(fileBuffer.length / 1024).toFixed(1)} KB)`);
         } catch (fileError: any) {
-          logger.error(`[doc:${documentId}] ✗ Failed to download document file`, {
+          docLogger.error(` ✗ Failed to download document file`, {
             thumbnailError: thumbError.message,
             rawFileError: fileError.message,
             hint: 'Check if document exists and is accessible'
@@ -143,25 +193,25 @@ export async function processPaperlessDocument(
       });
 
       const base64 = fileBuffer.toString('base64');
-      logger.debug(`[doc:${documentId}] Encoded file to base64 (${(base64.length / 1024).toFixed(1)} KB)`);
+      docLogger.debug(` Encoded file to base64 (${(base64.length / 1024).toFixed(1)} KB)`);
 
       // Get existing tag names to pass to AI for context
       const allTags = await client.getTags();
       const existingTagNames = doc.tags
         ?.map((tagId: number) => allTags.find((t: any) => t.id === tagId)?.name)
         .filter(Boolean) as string[] || [];
-      logger.debug(`[doc:${documentId}] Existing tags: [${existingTagNames.join(', ')}]`);
+      docLogger.debug(` Existing tags: [${existingTagNames.join(', ')}]`);
 
       // STAGE 4: Extract data using Together AI
-      logger.debug(`[doc:${documentId}] Sending to Together AI for OCR extraction...`);
+      docLogger.debug(` Sending to Together AI for OCR extraction...`);
       await reporter.report('receipt:processing', { documentId, progress: 30, message: 'Extracting data with AI' });
 
       let receipts: any[];
       try {
         receipts = await extractReceiptData(base64, togetherClient, { existingTags: existingTagNames });
-        logger.debug(`[doc:${documentId}] ✓ AI extraction complete, found ${receipts.length} receipt(s)`);
+        docLogger.debug(` ✓ AI extraction complete, found ${receipts.length} receipt(s)`);
       } catch (ocrError: any) {
-        logger.error(`[doc:${documentId}] ✗ AI extraction failed`, {
+        docLogger.error(` ✗ AI extraction failed`, {
           error: ocrError.message,
           hint: 'Check Together AI API key and rate limits'
         });
@@ -170,26 +220,26 @@ export async function processPaperlessDocument(
 
       // Handle case where no receipt data was found
       if (receipts.length === 0) {
-        logger.warn(`[doc:${documentId}] No receipt data extracted from document`);
+        docLogger.warn(` No receipt data extracted from document`);
 
         // Tag as skipped in Paperless
         const skippedTagName = config.processing.skippedTag;
-        logger.debug(`[doc:${documentId}] Adding skipped tag "${skippedTagName}"...`);
+        docLogger.debug(` Adding skipped tag "${skippedTagName}"...`);
 
         try {
           const skippedTagId = await client.getOrCreateTag(skippedTagName);
-          logger.debug(`[doc:${documentId}] Got/created skipped tag ID: ${skippedTagId}`);
+          docLogger.debug(` Got/created skipped tag ID: ${skippedTagId}`);
 
           const currentTags = doc.tags || [];
           if (!currentTags.includes(skippedTagId)) {
             currentTags.push(skippedTagId);
             await client.updateDocument(documentId, { tags: currentTags });
-            logger.info(`[doc:${documentId}] ✓ Tagged as "${skippedTagName}"`);
+            docLogger.info(` ✓ Tagged as "${skippedTagName}"`);
           } else {
-            logger.debug(`[doc:${documentId}] Document already has skipped tag`);
+            docLogger.debug(` Document already has skipped tag`);
           }
         } catch (tagError: any) {
-          logger.error(`[doc:${documentId}] ✗ Failed to add skipped tag`, {
+          docLogger.error(` ✗ Failed to add skipped tag`, {
             error: tagError.message
           });
         }
@@ -203,7 +253,7 @@ export async function processPaperlessDocument(
       }
 
       receipt = receipts[0];
-      logger.info(`[doc:${documentId}] ✓ Extracted receipt data`, {
+      docLogger.info(` ✓ Extracted receipt data`, {
         vendor: receipt.vendor,
         amount: receipt.amount,
         currency: receipt.currency,
@@ -226,7 +276,7 @@ export async function processPaperlessDocument(
     // ─────────────────────────────────────────────────────────────────────────
     // STAGE 5-6: Update Paperless-NGX with extracted data
     // ─────────────────────────────────────────────────────────────────────────
-    logger.debug(`[doc:${documentId}] Starting Paperless update phase...`);
+    docLogger.debug(` Starting Paperless update phase...`);
     await reporter.report('receipt:processing', {
       documentId,
       progress: 70,
@@ -237,28 +287,28 @@ export async function processPaperlessDocument(
     });
 
     // Re-fetch document to get current state (in case of retries)
-    logger.debug(`[doc:${documentId}] Re-fetching document for update...`);
+    docLogger.debug(` Re-fetching document for update...`);
     let doc: any;
     try {
       doc = await client.getDocument(documentId);
-      logger.debug(`[doc:${documentId}] ✓ Got current document state`, {
+      docLogger.debug(` ✓ Got current document state`, {
         currentTags: doc.tags
       });
     } catch (error: any) {
-      logger.error(`[doc:${documentId}] ✗ Failed to re-fetch document for update`, {
+      docLogger.error(` ✗ Failed to re-fetch document for update`, {
         error: error.message
       });
       throw error;
     }
 
     // Get or create the processed tag
-    logger.debug(`[doc:${documentId}] Getting/creating processed tag "${config.processing.processedTag}"...`);
+    docLogger.debug(` Getting/creating processed tag "${config.processing.processedTag}"...`);
     let processedTagId: number;
     try {
       processedTagId = await client.getOrCreateTag(config.processing.processedTag);
-      logger.debug(`[doc:${documentId}] ✓ Processed tag ID: ${processedTagId}`);
+      docLogger.debug(` ✓ Processed tag ID: ${processedTagId}`);
     } catch (error: any) {
-      logger.error(`[doc:${documentId}] ✗ Failed to get/create processed tag`, {
+      docLogger.error(` ✗ Failed to get/create processed tag`, {
         tagName: config.processing.processedTag,
         error: error.message
       });
@@ -266,13 +316,13 @@ export async function processPaperlessDocument(
     }
 
     // Get or create correspondent for the vendor
-    logger.debug(`[doc:${documentId}] Getting/creating correspondent "${receipt.vendor}"...`);
+    docLogger.debug(` Getting/creating correspondent "${receipt.vendor}"...`);
     let correspondentId: number;
     try {
       correspondentId = await client.getOrCreateCorrespondent(receipt.vendor);
-      logger.debug(`[doc:${documentId}] ✓ Correspondent ID: ${correspondentId}`);
+      docLogger.debug(` ✓ Correspondent ID: ${correspondentId}`);
     } catch (error: any) {
-      logger.error(`[doc:${documentId}] ✗ Failed to get/create correspondent`, {
+      docLogger.error(` ✗ Failed to get/create correspondent`, {
         vendor: receipt.vendor,
         error: error.message
       });
@@ -286,13 +336,13 @@ export async function processPaperlessDocument(
     }
 
     // Get or create category tag
-    logger.debug(`[doc:${documentId}] Getting/creating category tag "${receipt.category}"...`);
+    docLogger.debug(` Getting/creating category tag "${receipt.category}"...`);
     let categoryTagId: number;
     try {
       categoryTagId = await client.getOrCreateTag(receipt.category);
-      logger.debug(`[doc:${documentId}] ✓ Category tag ID: ${categoryTagId}`);
+      docLogger.debug(` ✓ Category tag ID: ${categoryTagId}`);
     } catch (error: any) {
-      logger.error(`[doc:${documentId}] ✗ Failed to get/create category tag`, {
+      docLogger.error(` ✗ Failed to get/create category tag`, {
         category: receipt.category,
         error: error.message
       });
@@ -303,9 +353,9 @@ export async function processPaperlessDocument(
       currentTags.push(categoryTagId);
     }
 
-    // Process AI-suggested tags (if any)
-    if (receipt.suggested_tags?.length) {
-      logger.debug(`[doc:${documentId}] Processing ${receipt.suggested_tags.length} suggested tags...`);
+    // Process AI-suggested tags (if config.processing.autoTag is enabled)
+    if (config.processing.autoTag && receipt.suggested_tags?.length) {
+      docLogger.debug(` Processing ${receipt.suggested_tags.length} suggested tags...`);
       const { tagIds: suggestedTagIds, errors: tagErrors } = await client.processTags(receipt.suggested_tags);
 
       for (const tagId of suggestedTagIds) {
@@ -315,52 +365,74 @@ export async function processPaperlessDocument(
       }
 
       if (tagErrors.length > 0) {
-        logger.warn(`[doc:${documentId}] Some suggested tags failed`, { errors: tagErrors });
+        docLogger.warn(` Some suggested tags failed`, { errors: tagErrors });
       }
-      logger.debug(`[doc:${documentId}] ✓ Added ${suggestedTagIds.length} suggested tags`);
+      docLogger.debug(` ✓ Added ${suggestedTagIds.length} suggested tags`);
+    } else if (!config.processing.autoTag) {
+      docLogger.debug(` Skipping suggested tags (autoTag disabled)`);
     }
 
     // Apply the update to Paperless
     // Use AI-generated title if available, otherwise fallback to vendor + amount format
     const newTitle = receipt.title || `${receipt.vendor} - ${receipt.amount} ${receipt.currency}`;
-    logger.debug(`[doc:${documentId}] Applying update to Paperless...`, {
+    docLogger.debug(` Applying update to Paperless...`, {
       title: newTitle,
       created: receipt.date,
       correspondent: correspondentId,
       tags: currentTags
     });
 
-    // Ensure json_payload custom field exists and prepare receipt data
+    // Ensure json_payload custom field exists and prepare receipt data (if enabled)
     let jsonPayloadFieldId: number | null = null;
-    try {
-      jsonPayloadFieldId = await client.ensureCustomField('json_payload', 'longtext');
-      logger.debug(`[doc:${documentId}] Using json_payload custom field ID: ${jsonPayloadFieldId}`);
-    } catch (fieldError: any) {
-      logger.warn(`[doc:${documentId}] ⚠ Failed to ensure json_payload custom field`, {
-        error: fieldError.message
-      });
-      // Continue without custom field - not fatal
+    let customFieldsPayload: Array<{ field: number; value: string }> | undefined = undefined;
+
+    if (config.processing.addJsonPayload) {
+      try {
+        jsonPayloadFieldId = await client.ensureCustomField('json_payload', 'longtext');
+        docLogger.debug(` Using json_payload custom field ID: ${jsonPayloadFieldId}`);
+      } catch (fieldError: any) {
+        docLogger.warn(` ⚠ Failed to ensure json_payload custom field`, {
+          error: fieldError.message
+        });
+        // Continue without custom field - not fatal
+      }
+
+      // Build custom fields payload with multi-schema structure
+      if (jsonPayloadFieldId) {
+        customFieldsPayload = [{
+          field: jsonPayloadFieldId,
+          value: JSON.stringify({
+            receipt_data: {
+              vendor: receipt.vendor,
+              amount: receipt.amount,
+              currency: receipt.currency,
+              date: receipt.date,
+              category: receipt.category,
+              paymentMethod: receipt.paymentMethod,
+              taxAmount: receipt.taxAmount,
+              title: receipt.title,
+              summary: receipt.summary,
+              line_items: receipt.line_items,
+              suggested_tags: receipt.suggested_tags,
+            }
+          })
+        }];
+      }
+    } else {
+      docLogger.debug(` Skipping json_payload custom field (addJsonPayload disabled)`);
     }
 
-    // Build custom fields payload with multi-schema structure
-    const customFieldsPayload = jsonPayloadFieldId ? [{
-      field: jsonPayloadFieldId,
-      value: JSON.stringify({
-        receipt_data: {
-          vendor: receipt.vendor,
-          amount: receipt.amount,
-          currency: receipt.currency,
-          date: receipt.date,
-          category: receipt.category,
-          paymentMethod: receipt.paymentMethod,
-          taxAmount: receipt.taxAmount,
-          title: receipt.title,
-          summary: receipt.summary,
-          line_items: receipt.line_items,
-          suggested_tags: receipt.suggested_tags,
-        }
-      })
-    }] : undefined;
+    // Build formatted content with receipt data and preserve raw OCR (if enabled)
+    let newContent: string | undefined = undefined;
+    if (config.processing.updateContent) {
+      const formattedContent = receiptToMarkdown(receipt);
+      const existingContent = doc.content || '';
+      newContent = existingContent
+        ? `${formattedContent}\n\n---\n\n### Raw OCR Text\n\n${existingContent}`
+        : formattedContent;
+    } else {
+      docLogger.debug(` Skipping content update (updateContent disabled)`);
+    }
 
     try {
       await client.updateDocument(documentId, {
@@ -368,16 +440,17 @@ export async function processPaperlessDocument(
         created: receipt.date,
         correspondent: correspondentId,
         tags: currentTags,
-        custom_fields: customFieldsPayload,
+        ...(newContent && { content: newContent }),
+        ...(customFieldsPayload && { custom_fields: customFieldsPayload }),
       });
-      logger.info(`[doc:${documentId}] ✓ Successfully updated document in Paperless`, {
+      docLogger.info(` ✓ Successfully updated document in Paperless`, {
         title: newTitle,
         correspondent: receipt.vendor,
         category: receipt.category,
         hasCustomField: !!jsonPayloadFieldId
       });
     } catch (error: any) {
-      logger.error(`[doc:${documentId}] ✗ Failed to update document in Paperless`, {
+      docLogger.error(` ✗ Failed to update document in Paperless`, {
         error: error.message,
         attempted: { title: newTitle, tags: currentTags }
       });
@@ -392,10 +465,10 @@ export async function processPaperlessDocument(
 
       const noteContent = `## Receipt Summary\n\n${summaryText}\n\n---\n\n## Raw Data (Reference)\n\n\`\`\`json\n${JSON.stringify(receipt, null, 2)}\n\`\`\``;
       await client.addNote(documentId, noteContent);
-      logger.info(`[doc:${documentId}] ✓ Added receipt summary and JSON as note`);
+      docLogger.info(` ✓ Added receipt summary and JSON as note`);
     } catch (noteError: any) {
       // Non-fatal: log but don't fail the whole process
-      logger.warn(`[doc:${documentId}] ⚠ Failed to add receipt note`, {
+      docLogger.warn(` ⚠ Failed to add receipt note`, {
         error: noteError.message
       });
     }
@@ -414,16 +487,16 @@ export async function processPaperlessDocument(
 
   } catch (error: any) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(`[doc:${documentId}] Processing failed`, { error: errorMessage });
+    docLogger.error(` Processing failed`, { error: errorMessage });
 
     if (retryQueue) {
       if (await retryQueue.shouldGiveUp(documentId)) {
-        logger.error(`[doc:${documentId}] ✗ Giving up after ${maxRetries} attempts`);
+        docLogger.error(` ✗ Giving up after ${maxRetries} attempts`);
         await reporter.report('receipt:failed', { documentId, message: errorMessage, progress: 100 });
 
         // Add failed tag
         if (failedTag) {
-          logger.debug(`[doc:${documentId}] Adding failed tag "${failedTag}"...`);
+          docLogger.debug(` Adding failed tag "${failedTag}"...`);
           try {
             const failedTagId = await client.getOrCreateTag(failedTag);
             const doc = await client.getDocument(documentId);
@@ -431,10 +504,10 @@ export async function processPaperlessDocument(
             if (!currentTags.includes(failedTagId)) {
               currentTags.push(failedTagId);
               await client.updateDocument(documentId, { tags: currentTags });
-              logger.info(`[doc:${documentId}] ✓ Tagged as "${failedTag}"`);
+              docLogger.info(` ✓ Tagged as "${failedTag}"`);
             }
           } catch (tagError: any) {
-            logger.error(`[doc:${documentId}] ✗ Failed to add failed tag`, {
+            docLogger.error(` ✗ Failed to add failed tag`, {
               error: tagError.message
             });
           }
@@ -442,7 +515,7 @@ export async function processPaperlessDocument(
 
         await retryQueue.remove(documentId);
       } else {
-        logger.info(`[doc:${documentId}] Scheduling for retry...`);
+        docLogger.info(` Scheduling for retry...`);
         await retryQueue.add(documentId, errorMessage);
         await reporter.report('receipt:retry', { documentId, message: errorMessage, attempts: attemptNum, progress: 0 });
       }

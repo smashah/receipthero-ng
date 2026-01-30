@@ -126,6 +126,7 @@ export interface LogEntry {
   source: LogSource;
   message: string;
   context?: string; // JSON string
+  documentId?: number; // Optional: links log to a specific document
 }
 
 export interface LogEvent {

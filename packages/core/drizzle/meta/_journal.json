@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1769667185807,
-      "tag": "0000_sleepy_hemingway",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1769708944569,
-      "tag": "0001_stale_vector",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1769709540792,
-      "tag": "0002_quick_blockbuster",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1769719016287,
-      "tag": "0003_thankful_the_stranger",
+      "when": 1769749811090,
+      "tag": "0000_wide_wild_child",
       "breakpoints": true
     }
   ]

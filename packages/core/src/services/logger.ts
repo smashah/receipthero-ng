@@ -6,13 +6,13 @@ const colors = {
   reset: '\x1b[0m',
   dim: '\x1b[2m',
   bold: '\x1b[1m',
-  
+
   // Log levels
   error: '\x1b[31m',    // red
   warn: '\x1b[33m',     // yellow
   info: '\x1b[36m',     // cyan
   debug: '\x1b[90m',    // gray
-  
+
   // Sources (distinct colors for easy identification)
   worker: '\x1b[35m',   // magenta
   api: '\x1b[32m',      // green
@@ -61,12 +61,12 @@ function formatSource(source: LogSource): string {
 
 function formatContext(context: any): string {
   if (!context) return '';
-  
+
   // Handle Error objects specially
   if (context instanceof Error) {
     return colorize(`\n  ${context.stack || context.message}`, 'dim');
   }
-  
+
   // For objects, format as compact JSON
   if (typeof context === 'object') {
     try {
@@ -79,29 +79,32 @@ function formatContext(context: any): string {
       return '';
     }
   }
-  
+
   return colorize(` ${String(context)}`, 'dim');
 }
 
 export class Logger {
-  private source: LogSource;
+  protected source: LogSource;
+  protected documentId?: number;
 
-  constructor(source: LogSource) {
+  constructor(source: LogSource, documentId?: number) {
     this.source = source;
+    this.documentId = documentId;
   }
 
-  private async emit(level: LogLevel, message: string, context?: any) {
+  protected async emit(level: LogLevel, message: string, context?: any) {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
       source: this.source,
       message,
       context: context ? (typeof context === 'string' ? context : JSON.stringify(context)) : undefined,
+      documentId: this.documentId,
     };
 
     // 1. Output to console with structured formatting
     const line = `${formatTimestamp()} ${formatLevel(level)} ${formatSource(this.source)} ${message}${formatContext(context)}`;
-    
+
     if (level === 'error') {
       console.error(line);
     } else if (level === 'warn') {
@@ -121,7 +124,7 @@ export class Logger {
   warn(msg: string, ctx?: any) { this.emit('warn', msg, ctx); }
   error(msg: string, ctx?: any) { this.emit('error', msg, ctx); }
   debug(msg: string, ctx?: any) { this.emit('debug', msg, ctx); }
-  
+
   /**
    * Log with a specific emoji prefix for key lifecycle events
    */
@@ -129,17 +132,27 @@ export class Logger {
     // Override the default emoji just for this message
     const line = `${formatTimestamp()} ${emoji}  ${colorize('INFO ', 'info')} ${formatSource(this.source)} ${msg}${formatContext(ctx)}`;
     console.log(line);
-    
+
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level: 'info',
       source: this.source,
       message: `${emoji} ${msg}`,
       context: ctx ? JSON.stringify(ctx) : undefined,
+      documentId: this.documentId,
     };
-    reporter.report('log:entry' as any, entry).catch(() => {});
+    reporter.report('log:entry' as any, entry).catch(() => { });
+  }
+
+  /**
+   * Create a document-scoped logger that automatically includes documentId in all logs.
+   * This allows filtering logs by document in the UI.
+   */
+  withDocument(documentId: number): Logger {
+    return new Logger(this.source, documentId);
   }
 }
 
 export const logger = new Logger('core');
 export const createLogger = (source: LogSource) => new Logger(source);
+

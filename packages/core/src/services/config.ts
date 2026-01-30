@@ -27,6 +27,9 @@ function getDefaultConfigTemplate(): Record<string, unknown> {
       failedTag: 'receipt-failed',
       skippedTag: 'receipt-skipped',
       maxRetries: 3,
+      updateContent: true,
+      addJsonPayload: true,
+      autoTag: true,
     },
     rateLimit: {
       enabled: false,
@@ -132,6 +135,21 @@ export function loadConfig(): Config {
         fileConfig,
         ['processing', 'maxRetries'],
         process.env.MAX_RETRIES ? parseInt(process.env.MAX_RETRIES, 10) : undefined
+      ),
+      updateContent: getConfigValueBoolean(
+        fileConfig,
+        ['processing', 'updateContent'],
+        process.env.UPDATE_CONTENT === 'true' ? true : process.env.UPDATE_CONTENT === 'false' ? false : undefined
+      ),
+      addJsonPayload: getConfigValueBoolean(
+        fileConfig,
+        ['processing', 'addJsonPayload'],
+        process.env.ADD_JSON_PAYLOAD === 'true' ? true : process.env.ADD_JSON_PAYLOAD === 'false' ? false : undefined
+      ),
+      autoTag: getConfigValueBoolean(
+        fileConfig,
+        ['processing', 'autoTag'],
+        process.env.AUTO_TAG === 'true' ? true : process.env.AUTO_TAG === 'false' ? false : undefined
       ),
     },
     rateLimit: {

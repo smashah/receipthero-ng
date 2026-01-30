@@ -1,1 +1,0 @@
-ALTER TABLE `processing_logs` ADD `receiptData` text;

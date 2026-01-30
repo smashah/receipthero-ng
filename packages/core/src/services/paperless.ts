@@ -356,6 +356,7 @@ export class PaperlessClient {
     created?: string;
     correspondent?: number;
     tags?: number[];
+    content?: string;
     custom_fields?: Array<{ field: number; value: string | number | boolean | null }>;
   }) {
     await this.fetchApi(`/documents/${id}/`, {

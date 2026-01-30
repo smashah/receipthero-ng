@@ -14,6 +14,7 @@ import {
   type QueueStatus,
   type QueueActionResponse,
 } from './api';
+import type { LogEntry } from '@sm-rn/shared/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Health Query
@@ -52,6 +53,17 @@ export function useAppLogs(source?: string) {
   return useQuery({
     queryKey: ['app-logs', source],
     queryFn: () => fetchApi<LogEntry[]>(`/api/events/logs${source ? `?source=${source}` : ''}`),
+  });
+}
+
+/**
+ * Fetches logs for a specific document.
+ */
+export function useDocumentLogs(documentId: number | null) {
+  return useQuery({
+    queryKey: ['document-logs', documentId],
+    queryFn: () => fetchApi<LogEntry[]>(`/api/events/logs/document/${documentId}`),
+    enabled: !!documentId, // Only fetch when documentId is provided
   });
 }
 
@@ -171,6 +183,26 @@ export function useResumeWorker() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: healthKeys.all });
       queryClient.invalidateQueries({ queryKey: workerKeys.all });
+    },
+  });
+}
+
+/**
+ * Triggers an immediate worker scan.
+ */
+export function useTriggerScan() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      fetchApi<{ success: boolean; message: string }>('/api/worker/scan', {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      // Invalidate all relevant queries so UI refreshes
+      queryClient.invalidateQueries({ queryKey: healthKeys.all });
+      queryClient.invalidateQueries({ queryKey: workerKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['processing-logs'] });
     },
   });
 }

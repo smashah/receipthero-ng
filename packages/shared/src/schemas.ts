@@ -17,6 +17,10 @@ export const ConfigSchema = z.object({
     skippedTag: z.string().default("ai-skipped"),
     maxRetries: z.number().int().positive().default(3),
     retryStrategy: z.enum(['full', 'partial']).default('partial'),
+    // Feature toggles
+    updateContent: z.boolean().default(true),    // Normalize and update document content
+    addJsonPayload: z.boolean().default(true),   // Add receipt JSON as custom field
+    autoTag: z.boolean().default(true),          // Auto-add suggested tags from AI
   }),
   rateLimit: z.object({
     enabled: z.boolean().default(false),
@@ -52,6 +56,9 @@ export const PartialConfigSchema = z.object({
     skippedTag: z.string().optional(),
     maxRetries: z.number().int().positive().optional(),
     retryStrategy: z.enum(['full', 'partial']).optional(),
+    updateContent: z.boolean().optional(),
+    addJsonPayload: z.boolean().optional(),
+    autoTag: z.boolean().optional(),
   }).optional(),
   rateLimit: z.object({
     enabled: z.boolean().optional(),

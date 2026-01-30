@@ -14,7 +14,7 @@ import {
 import { JsonViewer } from './devtools/json-viewer';
 import { CliOutput } from './ui/cli-output';
 import { API_BASE_URL } from '@/lib/api';
-import { useRetryProcessing } from '@/lib/queries';
+import { useRetryProcessing, useDocumentLogs } from '@/lib/queries';
 
 export function ProcessingList({ logs }: { logs: ProcessingLog[] }) {
   const [selectedLog, setSelectedLog] = useState<ProcessingLog | null>(null);
@@ -74,6 +74,7 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
   onOpenChange: (open: boolean) => void 
 }) {
   const retryMutation = useRetryProcessing();
+  const { data: documentLogs, isLoading: logsLoading } = useDocumentLogs(log?.documentId ?? null);
   
   if (!log) return null;
 
@@ -94,6 +95,19 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
       }
     );
   };
+
+  // Format logs for CliOutput component
+  const formattedLogs = documentLogs?.length 
+    ? documentLogs.slice().reverse().map(entry => ({
+        text: `[${entry.source.toUpperCase()}] ${entry.message}`,
+        timestamp: entry.timestamp,
+        level: entry.level as 'info' | 'warn' | 'error' | 'debug',
+      }))
+    : [{ 
+        text: log.message || 'Waiting for progress updates...', 
+        timestamp: log.updatedAt, 
+        level: (log.status === 'failed' ? 'error' : 'info') as 'info' | 'error'
+      }];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -171,54 +185,58 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
             </div>
           </div>
 
-          {/* Right Side: Logs or JSON */}
-          <div className="w-1/2 flex flex-col p-4 overflow-hidden bg-zinc-50">
+          {/* Right Side: Logs or JSON - Scrollable */}
+          <div className="w-1/2 flex flex-col p-4 overflow-y-auto bg-zinc-50">
             {receiptData ? (
-              <div className="flex-1 flex flex-col overflow-hidden space-y-4">
-                {/* JSON Section (Top 3/4) */}
-                <div className="flex-[3] flex flex-col overflow-hidden min-h-0">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-2">
+              <div className="flex flex-col gap-6">
+                {/* JSON Section */}
+                <div className="flex flex-col min-h-[50vh]">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-2 sticky top-0 bg-zinc-50 py-2 -mt-2">
                     <Brain className="h-4 w-4" /> Extracted Data
                   </h3>
                   <JsonViewer 
                     data={receiptData} 
-                    className="flex-1 overflow-hidden"
+                    className="flex-1"
                     searchable={true} 
                   />
                 </div>
                 
-                {/* Logs Section (Bottom 1/4) */}
-                <div className="flex-1 flex flex-col overflow-hidden border-t pt-4 min-h-0">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-2">
-                    <Activity className="h-4 w-4" /> Processing History
+                {/* Logs Section */}
+                <div className="flex flex-col min-h-[50vh] border-t pt-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-2 sticky top-0 bg-zinc-50 py-2 -mt-2">
+                    <Activity className="h-4 w-4" /> Processing Logs ({documentLogs?.length ?? 0})
                   </h3>
-                  <CliOutput 
-                    output={[{ 
-                      text: log.message || 'Processing complete', 
-                      timestamp: log.updatedAt, 
-                      level: 'info' 
-                    }]} 
-                    showTimestamps 
-                    prompt=">"
-                    className="flex-1 min-h-[100px]"
-                  />
+                  {logsLoading ? (
+                    <div className="flex items-center justify-center flex-1">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <CliOutput 
+                      output={formattedLogs} 
+                      showTimestamps 
+                      prompt=">"
+                      className="flex-1"
+                    />
+                  )}
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 flex flex-col">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-4">
-                  <Activity className="h-4 w-4" /> Real-time Logs
+                  <Activity className="h-4 w-4" /> Real-time Logs ({documentLogs?.length ?? 0})
                 </h3>
-                <CliOutput 
-                  output={[{ 
-                    text: log.message || 'Waiting for progress updates...', 
-                    timestamp: log.updatedAt, 
-                    level: log.status === 'failed' ? 'error' : 'info' 
-                  }]} 
-                  showTimestamps 
-                  prompt=">"
-                  className="flex-1"
-                />
+                {logsLoading ? (
+                  <div className="flex items-center justify-center flex-1">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <CliOutput 
+                    output={formattedLogs} 
+                    showTimestamps 
+                    prompt=">"
+                    className="flex-1"
+                  />
+                )}
               </div>
             )}
           </div>
