@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Config } from '@sm-rn/shared/schemas';
 import type { ProcessingLog } from '@sm-rn/shared/types';
 
-// Import server functions (these proxy to the API)
 import {
   getHealthStatus,
   getConfig as getConfigFn,
@@ -21,6 +20,7 @@ import {
   retryDocument,
   testPaperlessConnection,
   testTogetherConnection,
+  getCurrencyTotals as getCurrencyTotalsFn,
   type HealthStatus,
   type SaveConfigResponse,
   type TestConnectionResponse,
@@ -28,6 +28,7 @@ import {
   type QueueStatus,
   type QueueActionResponse,
   type TriggerScanResponse,
+  type CurrencyTotalsResponse,
 } from './server';
 
 // Re-export types for convenience
@@ -40,6 +41,7 @@ export type {
   QueueActionResponse,
   TriggerScanResponse,
   ProcessingLog,
+  CurrencyTotalsResponse,
 };
 export type { Config };
 
@@ -56,6 +58,11 @@ export const configKeys = {
   all: ['config'] as const,
   current: () => [...configKeys.all, 'current'] as const,
   currencies: () => [...configKeys.all, 'currencies'] as const,
+};
+
+export const statsKeys = {
+  all: ['stats'] as const,
+  currencyTotals: () => [...statsKeys.all, 'currency-totals'] as const,
 };
 
 export const workerKeys = {
@@ -160,6 +167,17 @@ export function useAvailableCurrencies() {
       return response.currencies;
     },
     staleTime: 1000 * 60 * 60, // Cache for 1 hour on client
+  });
+}
+
+/**
+ * Fetches currency totals from processed receipts.
+ */
+export function useCurrencyTotals() {
+  return useQuery({
+    queryKey: statsKeys.currencyTotals(),
+    queryFn: () => getCurrencyTotalsFn(),
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 }
 

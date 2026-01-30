@@ -285,7 +285,7 @@ export async function processPaperlessDocument(
       });
 
       try {
-        const { convertAmount } = await import('./ecb');
+        const { convertAmount } = await import('./fawazahmed0');
         const targetCurrencies = config.processing.currencyConversion.targetCurrencies || ['GBP', 'USD'];
 
         const result = await convertAmount(

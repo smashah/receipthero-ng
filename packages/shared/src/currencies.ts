@@ -1,4 +1,4 @@
-{
+export const currencies = {
 	"AED": {
 		"name": "United Arab Emirates Dirham",
 		"demonym": "UAE",
@@ -891,20 +891,6 @@
 		"symbolNative": "Rp",
 		"minorSingle": "Sen",
 		"minorPlural": "Sen",
-		"ISOdigits": 2,
-		"decimals": 2,
-		"numToBasic": 100
-	},
-	"ILS": {
-		"name": "Israeli new Shekel",
-		"demonym": "Israeli",
-		"majorSingle": "Shekel",
-		"majorPlural": "Shekels",
-		"ISOnum": 376,
-		"symbol": "₪",
-		"symbolNative": "₪",
-		"minorSingle": "Agora",
-		"minorPlural": "Agoras",
 		"ISOdigits": 2,
 		"decimals": 2,
 		"numToBasic": 100

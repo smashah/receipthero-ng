@@ -564,7 +564,7 @@ function SettingsPage() {
                     <div className="grid gap-2">
                       <Label>Target Currencies</Label>
                       <Combobox
-                        items={availableCurrencies}
+                        items={availableCurrencies.map(c => c.code)}
                         multiple
                         value={localConfig.processing.currencyConversion?.targetCurrencies || []}
                         onValueChange={(currencies) => handleCurrencyConversionChange('targetCurrencies', currencies)}
@@ -580,11 +580,15 @@ function SettingsPage() {
                         <ComboboxContent anchor={currencyAnchor}>
                           <ComboboxEmpty>No currencies found.</ComboboxEmpty>
                           <ComboboxList>
-                            {(currency) => (
-                              <ComboboxItem key={currency} value={currency}>
-                                {currency}
-                              </ComboboxItem>
-                            )}
+                            {(code) => {
+                              const info = availableCurrencies.find(c => c.code === code);
+                              return (
+                                <ComboboxItem key={code} value={code}>
+                                  <span className="font-medium">{code}</span>
+                                  {info && <span className="ml-2 text-muted-foreground text-xs">{info.name}</span>}
+                                </ComboboxItem>
+                              );
+                            }}
                           </ComboboxList>
                         </ComboboxContent>
                       </Combobox>
