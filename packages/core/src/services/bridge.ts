@@ -274,6 +274,47 @@ export async function processPaperlessDocument(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // STAGE 4.5: Currency Conversion (failable - non-blocking)
+    // ─────────────────────────────────────────────────────────────────────────
+    if (config.processing.currencyConversion?.enabled && receipt.currency && receipt.date) {
+      docLogger.debug(`Starting currency conversion...`);
+      await reporter.report('receipt:processing', {
+        documentId,
+        progress: 55,
+        message: 'Converting currencies'
+      });
+
+      try {
+        const { convertAmount } = await import('./ecb');
+        const targetCurrencies = config.processing.currencyConversion.targetCurrencies || ['GBP', 'USD'];
+
+        const result = await convertAmount(
+          receipt.amount,
+          receipt.currency,
+          targetCurrencies,
+          receipt.date
+        );
+
+        if (result) {
+          receipt.conversions = result.conversions;
+          docLogger.info(`✓ Converted to ${Object.keys(result.conversions).join(', ')}`, {
+            conversions: result.conversions,
+            weekRange: `${result.weekStart} to ${result.weekEnd}`
+          });
+        } else {
+          docLogger.debug(`Currency conversion returned no results (source may match targets)`);
+        }
+      } catch (error: any) {
+        // Non-fatal: log warning but continue processing
+        docLogger.warn(`⚠ Currency conversion failed (non-fatal)`, {
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    } else if (!config.processing.currencyConversion?.enabled) {
+      docLogger.debug(`Skipping currency conversion (disabled in config)`);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // STAGE 5-6: Update Paperless-NGX with extracted data
     // ─────────────────────────────────────────────────────────────────────────
     docLogger.debug(` Starting Paperless update phase...`);

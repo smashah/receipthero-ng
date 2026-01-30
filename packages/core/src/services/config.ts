@@ -30,6 +30,10 @@ function getDefaultConfigTemplate(): Record<string, unknown> {
       updateContent: true,
       addJsonPayload: true,
       autoTag: true,
+      currencyConversion: {
+        enabled: false,
+        targetCurrencies: ['GBP', 'USD'],
+      },
     },
     rateLimit: {
       enabled: false,
@@ -151,6 +155,11 @@ export function loadConfig(): Config {
         ['processing', 'autoTag'],
         process.env.AUTO_TAG === 'true' ? true : process.env.AUTO_TAG === 'false' ? false : undefined
       ),
+      currencyConversion: getConfigValueObject(
+        fileConfig,
+        ['processing', 'currencyConversion'],
+        undefined
+      ),
     },
     rateLimit: {
       enabled: getConfigValueBoolean(
@@ -225,6 +234,21 @@ function getConfigValueBoolean(
   const fileValue = getNestedValue(fileConfig, path);
   if (typeof fileValue === 'boolean') {
     return fileValue;
+  }
+  return envValue;
+}
+
+/**
+ * Gets an object value from the config file, falling back to env var value.
+ */
+function getConfigValueObject<T>(
+  fileConfig: Partial<Record<string, unknown>>,
+  path: string[],
+  envValue: T | undefined
+): T | undefined {
+  const fileValue = getNestedValue(fileConfig, path);
+  if (typeof fileValue === 'object' && fileValue !== null) {
+    return fileValue as T;
   }
   return envValue;
 }

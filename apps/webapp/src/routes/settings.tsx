@@ -10,7 +10,8 @@ import {
   Check, 
   ArrowLeft,
   Server,
-  Activity
+  Activity,
+  Coins
 } from 'lucide-react'
 
 import { Button } from '../components/ui/button'
@@ -34,6 +35,26 @@ import {
 } from '../lib/queries'
 import { FetchError, type ZodIssue } from '../lib/api'
 import { type Config, PartialConfigSchema } from '@sm-rn/shared/schemas'
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from '../components/ui/combobox'
+
+// Common currencies supported by ECB exchange rates
+const AVAILABLE_CURRENCIES = [
+  'GBP', 'USD', 'JPY', 'CHF', 'AUD', 'CAD', 'CNY', 'HKD', 'NZD', 'SEK',
+  'KRW', 'SGD', 'NOK', 'MXN', 'INR', 'RUB', 'ZAR', 'TRY', 'BRL', 'TWD',
+  'DKK', 'PLN', 'THB', 'IDR', 'HUF', 'CZK', 'CLP', 'PHP', 'AED',
+  'SAR', 'MYR', 'RON', 'BGN', 'ISK', 'HRK'
+]
 
 export const Route = createFileRoute('/settings')({
   component: SettingsPage,
@@ -61,7 +82,11 @@ function SettingsPage() {
       retryStrategy: 'partial',
       updateContent: true,
       addJsonPayload: true,
-      autoTag: true
+      autoTag: true,
+      currencyConversion: {
+        enabled: false,
+        targetCurrencies: ['GBP', 'USD']
+      }
     },
     rateLimit: {
       enabled: false,
@@ -116,6 +141,21 @@ function SettingsPage() {
       return next
     })
   }
+
+  const handleCurrencyConversionChange = (field: 'enabled' | 'targetCurrencies', value: boolean | string[]) => {
+    setLocalConfig(prev => ({
+      ...prev,
+      processing: {
+        ...prev.processing,
+        currencyConversion: {
+          ...prev.processing.currencyConversion,
+          [field]: value
+        }
+      }
+    }))
+  }
+
+  const currencyAnchor = useComboboxAnchor()
 
   const handleRateLimitChange = (field: keyof NonNullable<Config['rateLimit']>, value: any) => {
     setLocalConfig(prev => ({
@@ -501,6 +541,65 @@ function SettingsPage() {
                   />
                   <ErrorMessage path="processing.skippedTag" />
                 </div>
+              </div>
+
+              <Separator />
+
+              {/* Currency Conversion */}
+              <div className="space-y-4">
+                <h4 className="text-md font-medium flex items-center gap-2">
+                  <Coins className="h-4 w-4" /> Currency Conversion
+                </h4>
+                <p className="text-xs text-muted-foreground -mt-2">
+                  Convert receipt amounts to target currencies using ECB weekly average exchange rates
+                </p>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="currency-conversion-enabled"
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    checked={localConfig.processing.currencyConversion?.enabled || false}
+                    onChange={(e) => handleCurrencyConversionChange('enabled', e.target.checked)}
+                  />
+                  <Label htmlFor="currency-conversion-enabled">Enable Currency Conversion</Label>
+                </div>
+
+                {localConfig.processing.currencyConversion?.enabled && (
+                  <div className="grid gap-4 pl-6 border-l-2 border-gray-100 ml-2">
+                    <div className="grid gap-2">
+                      <Label>Target Currencies</Label>
+                      <Combobox
+                        items={AVAILABLE_CURRENCIES}
+                        multiple
+                        value={localConfig.processing.currencyConversion?.targetCurrencies || []}
+                        onValueChange={(currencies) => handleCurrencyConversionChange('targetCurrencies', currencies)}
+                      >
+                        <ComboboxChips ref={currencyAnchor}>
+                          <ComboboxValue>
+                            {(localConfig.processing.currencyConversion?.targetCurrencies || []).map((currency) => (
+                              <ComboboxChip key={currency}>{currency}</ComboboxChip>
+                            ))}
+                          </ComboboxValue>
+                          <ComboboxChipsInput placeholder="Add currency..." />
+                        </ComboboxChips>
+                        <ComboboxContent anchor={currencyAnchor}>
+                          <ComboboxEmpty>No currencies found.</ComboboxEmpty>
+                          <ComboboxList>
+                            {(currency) => (
+                              <ComboboxItem key={currency} value={currency}>
+                                {currency}
+                              </ComboboxItem>
+                            )}
+                          </ComboboxList>
+                        </ComboboxContent>
+                      </Combobox>
+                      <p className="text-xs text-muted-foreground">
+                        Select currencies to convert receipt amounts to using ECB rates
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

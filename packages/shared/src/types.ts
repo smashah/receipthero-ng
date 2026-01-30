@@ -30,6 +30,8 @@ export const ProcessedReceiptSchema = z.object({
   summary: z.string().optional(), // Text summary of the receipt
   line_items: z.array(LineItemSchema).optional(), // Individual items on the receipt
   suggested_tags: z.array(z.string()).optional(), // AI-suggested tags based on content
+  // Currency conversions (populated by ECB service if enabled)
+  conversions: z.record(z.string(), z.number()).optional(), // e.g., { "GBP": 2.5, "USD": 4.0 }
 });
 
 // Type exports

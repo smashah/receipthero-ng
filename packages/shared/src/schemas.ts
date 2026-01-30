@@ -21,6 +21,11 @@ export const ConfigSchema = z.object({
     updateContent: z.boolean().default(true),    // Normalize and update document content
     addJsonPayload: z.boolean().default(true),   // Add receipt JSON as custom field
     autoTag: z.boolean().default(true),          // Auto-add suggested tags from AI
+    // Currency conversion settings
+    currencyConversion: z.object({
+      enabled: z.boolean().default(false),
+      targetCurrencies: z.array(z.string()).default(['GBP', 'USD']),
+    }).optional().default({ enabled: false, targetCurrencies: ['GBP', 'USD'] }),
   }),
   rateLimit: z.object({
     enabled: z.boolean().default(false),
@@ -59,6 +64,10 @@ export const PartialConfigSchema = z.object({
     updateContent: z.boolean().optional(),
     addJsonPayload: z.boolean().optional(),
     autoTag: z.boolean().optional(),
+    currencyConversion: z.object({
+      enabled: z.boolean().optional(),
+      targetCurrencies: z.array(z.string()).optional(),
+    }).optional(),
   }).optional(),
   rateLimit: z.object({
     enabled: z.boolean().optional(),
