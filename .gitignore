@@ -41,3 +41,7 @@ yarn-error.log*
 
 config.json
 receipthero.db
+paperless_schema.yml
+
+.turbo/*
+.turbo
