@@ -35,6 +35,7 @@
       ],
       "env": [
         "PORT",
+        "API_URL",
         "DATABASE_PATH",
         "CONFIG_PATH",
         "PAPERLESS_HOST",

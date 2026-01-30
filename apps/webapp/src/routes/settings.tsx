@@ -58,7 +58,10 @@ function SettingsPage() {
       failedTag: 'ai-failed',
       skippedTag: 'ai-skipped',
       maxRetries: 3,
-      retryStrategy: 'partial'
+      retryStrategy: 'partial',
+      updateContent: true,
+      addJsonPayload: true,
+      autoTag: true
     },
     rateLimit: {
       enabled: false,
@@ -302,12 +305,10 @@ function SettingsPage() {
               Manage your connections and processing settings
             </p>
           </div>
-          <Button variant="ghost" asChild>
-            <Link to="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Link>
-          </Button>
+          <Link to="/" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
         </div>
 
         <Card>

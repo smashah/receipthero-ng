@@ -94,7 +94,6 @@ function DashboardPage() {
     }).format(date);
   };
 
-  const isConfigured = health?.checks.config === 'ok';
   const isLoading = isHealthLoading || isConfigLoading;
 
   // Error state - show connection error with retry info
@@ -375,7 +374,7 @@ function DashboardPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => pauseWorker.mutate()}
+                  onClick={() => pauseWorker.mutate(undefined)}
                   disabled={pauseWorker.isPending}
                 >
                   {pauseWorker.isPending ? (

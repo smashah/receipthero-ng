@@ -1,20 +1,70 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Config } from '@sm-rn/shared/schemas';
+import type { ProcessingLog } from '@sm-rn/shared/types';
+
+// Import server functions (these proxy to the API)
 import {
-  fetchApi,
-  healthKeys,
-  configKeys,
-  workerKeys,
-  queueKeys,
+  getHealthStatus,
+  getConfig as getConfigFn,
+  saveConfig as saveConfigFn,
+  pauseWorker as pauseWorkerFn,
+  resumeWorker as resumeWorkerFn,
+  triggerScanAndWait,
+  getQueueStatus as getQueueStatusFn,
+  retryAllQueue as retryAllQueueFn,
+  clearQueue as clearQueueFn,
+  clearSkippedDocuments,
+  getProcessingLogs,
+  getDocumentLogs,
+  getAppLogs,
+  retryDocument,
+  testPaperlessConnection,
+  testTogetherConnection,
   type HealthStatus,
-  type Config,
   type SaveConfigResponse,
   type TestConnectionResponse,
-  type ProcessingLog,
   type WorkerStatus,
   type QueueStatus,
   type QueueActionResponse,
-} from './api';
-import type { LogEntry } from '@sm-rn/shared/types';
+  type TriggerScanResponse,
+} from './server';
+
+// Re-export types for convenience
+export type {
+  HealthStatus,
+  SaveConfigResponse,
+  TestConnectionResponse,
+  WorkerStatus,
+  QueueStatus,
+  QueueActionResponse,
+  TriggerScanResponse,
+  ProcessingLog,
+};
+export type { Config };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Query Keys (kept for cache invalidation)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const healthKeys = {
+  all: ['health'] as const,
+  status: () => [...healthKeys.all, 'status'] as const,
+};
+
+export const configKeys = {
+  all: ['config'] as const,
+  current: () => [...configKeys.all, 'current'] as const,
+};
+
+export const workerKeys = {
+  all: ['worker'] as const,
+  status: () => [...workerKeys.all, 'status'] as const,
+};
+
+export const queueKeys = {
+  all: ['queue'] as const,
+  status: () => [...queueKeys.all, 'status'] as const,
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Health Query
@@ -27,7 +77,7 @@ import type { LogEntry } from '@sm-rn/shared/types';
 export function useHealth() {
   return useQuery({
     queryKey: healthKeys.status(),
-    queryFn: () => fetchApi<HealthStatus>('/api/health'),
+    queryFn: () => getHealthStatus(),
     refetchInterval: 30_000, // 30 seconds
     // Pause polling when tab is hidden
     refetchIntervalInBackground: false,
@@ -42,7 +92,8 @@ export function useHealth() {
 export function useProcessingLogs() {
   return useQuery({
     queryKey: ['processing-logs'],
-    queryFn: () => fetchApi<ProcessingLog[]>('/api/events'),
+    queryFn: () => getProcessingLogs(),
+    refetchInterval: 5_000, // Poll every 5 seconds for real-time feel
   });
 }
 
@@ -52,7 +103,7 @@ export function useProcessingLogs() {
 export function useAppLogs(source?: string) {
   return useQuery({
     queryKey: ['app-logs', source],
-    queryFn: () => fetchApi<LogEntry[]>(`/api/events/logs${source ? `?source=${source}` : ''}`),
+    queryFn: () => getAppLogs({ data: { source } }),
   });
 }
 
@@ -62,7 +113,7 @@ export function useAppLogs(source?: string) {
 export function useDocumentLogs(documentId: number | null) {
   return useQuery({
     queryKey: ['document-logs', documentId],
-    queryFn: () => fetchApi<LogEntry[]>(`/api/events/logs/document/${documentId}`),
+    queryFn: () => getDocumentLogs({ data: { documentId: documentId! } }),
     enabled: !!documentId, // Only fetch when documentId is provided
   });
 }
@@ -75,10 +126,7 @@ export function useRetryProcessing() {
 
   return useMutation({
     mutationFn: ({ id, strategy }: { id: number; strategy: 'full' | 'partial' }) =>
-      fetchApi<any>(`/api/processing/${id}/retry`, {
-        method: 'POST',
-        body: JSON.stringify({ strategy }),
-      }),
+      retryDocument({ data: { id, strategy } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['processing-logs'] });
     },
@@ -95,7 +143,7 @@ export function useRetryProcessing() {
 export function useConfig() {
   return useQuery({
     queryKey: configKeys.current(),
-    queryFn: () => fetchApi<Config>('/api/config'),
+    queryFn: () => getConfigFn(),
   });
 }
 
@@ -107,11 +155,7 @@ export function useSaveConfig() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (config: Partial<Config>) =>
-      fetchApi<SaveConfigResponse>('/api/config', {
-        method: 'PATCH',
-        body: JSON.stringify(config),
-      }),
+    mutationFn: (config: Partial<Config>) => saveConfigFn({ data: config }),
     onSuccess: () => {
       // Invalidate config and health queries to refresh state
       queryClient.invalidateQueries({ queryKey: configKeys.all });
@@ -126,10 +170,7 @@ export function useSaveConfig() {
 export function useTestPaperless() {
   return useMutation({
     mutationFn: (data: { host: string; apiKey: string }) =>
-      fetchApi<TestConnectionResponse>('/api/config/test-paperless', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      testPaperlessConnection({ data }),
   });
 }
 
@@ -139,10 +180,7 @@ export function useTestPaperless() {
 export function useTestTogether() {
   return useMutation({
     mutationFn: (data: { apiKey: string }) =>
-      fetchApi<TestConnectionResponse>('/api/config/test-together', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      testTogetherConnection({ data }),
   });
 }
 
@@ -157,11 +195,7 @@ export function usePauseWorker() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (reason?: string) =>
-      fetchApi<WorkerStatus>('/api/worker/pause', {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      }),
+    mutationFn: (reason?: string) => pauseWorkerFn({ data: { reason } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: healthKeys.all });
       queryClient.invalidateQueries({ queryKey: workerKeys.all });
@@ -176,10 +210,7 @@ export function useResumeWorker() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () =>
-      fetchApi<WorkerStatus>('/api/worker/resume', {
-        method: 'POST',
-      }),
+    mutationFn: () => resumeWorkerFn(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: healthKeys.all });
       queryClient.invalidateQueries({ queryKey: workerKeys.all });
@@ -194,21 +225,7 @@ export function useTriggerScan() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () =>
-      fetchApi<{
-        success: boolean;
-        message: string;
-        consumed: boolean;
-        durationMs: number;
-        scanResult: {
-          documentsFound: number;
-          documentsQueued: number;
-          documentsSkipped: number;
-          timestamp: string;
-        } | null;
-      }>('/api/worker/scan', {
-        method: 'POST',
-      }),
+    mutationFn: () => triggerScanAndWait(),
     onSuccess: () => {
       // Invalidate all relevant queries so UI refreshes
       queryClient.invalidateQueries({ queryKey: healthKeys.all });
@@ -228,7 +245,7 @@ export function useTriggerScan() {
 export function useQueueStatus() {
   return useQuery({
     queryKey: queueKeys.status(),
-    queryFn: () => fetchApi<QueueStatus>('/api/queue'),
+    queryFn: () => getQueueStatusFn(),
     refetchInterval: 30_000,
   });
 }
@@ -240,10 +257,7 @@ export function useRetryAllQueue() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () =>
-      fetchApi<QueueActionResponse>('/api/queue/retry-all', {
-        method: 'POST',
-      }),
+    mutationFn: () => retryAllQueueFn(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: healthKeys.all });
       queryClient.invalidateQueries({ queryKey: queueKeys.all });
@@ -258,10 +272,7 @@ export function useClearQueue() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () =>
-      fetchApi<QueueActionResponse>('/api/queue/clear', {
-        method: 'POST',
-      }),
+    mutationFn: () => clearQueueFn(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: healthKeys.all });
       queryClient.invalidateQueries({ queryKey: queueKeys.all });
@@ -276,10 +287,7 @@ export function useClearSkipped() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () =>
-      fetchApi<QueueActionResponse>('/api/queue/skipped/clear', {
-        method: 'POST',
-      }),
+    mutationFn: () => clearSkippedDocuments(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: healthKeys.all });
       queryClient.invalidateQueries({ queryKey: queueKeys.all });
