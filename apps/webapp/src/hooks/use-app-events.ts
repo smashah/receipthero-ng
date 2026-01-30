@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { WS_BASE_URL, type ProcessingLog, type AppEvent, type LogEntry } from '@/lib/api';
 import { useProcessingLogs, useAppLogs } from '@/lib/queries';
 
 export function useAppEvents() {
+  const queryClient = useQueryClient();
   const { data: initialProcessing, isLoading: isLoadingProcessing } = useProcessingLogs();
   const { data: initialLogs, isLoading: isLoadingLogs } = useAppLogs();
-  
+
   const [processingLogs, setProcessingLogs] = useState<ProcessingLog[]>([]);
   const [appLogs, setAppLogs] = useState<LogEntry[]>([]);
 
@@ -16,7 +18,7 @@ export function useAppEvents() {
   useEffect(() => {
     if (initialLogs) {
       // Sort initial logs by timestamp descending
-      const sorted = [...initialLogs].sort((a, b) => 
+      const sorted = [...initialLogs].sort((a, b) =>
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       setAppLogs(sorted);
@@ -38,16 +40,21 @@ export function useAppEvents() {
         try {
           const data: AppEvent = JSON.parse(event.data);
           const { type, payload } = data;
-          
+
           if (type === 'log:entry') {
             setAppLogs((prev) => [payload as LogEntry, ...prev].slice(0, 1000));
             return;
           }
 
+          // Refresh currency totals when a document is successfully processed
+          if (type === 'receipt:success') {
+            queryClient.invalidateQueries({ queryKey: ['stats', 'currency-totals'] });
+          }
+
           // Handle processing events
           setProcessingLogs((prev) => {
             const existingIndex = prev.findIndex((l) => l.documentId === payload.documentId);
-            
+
             let status = payload.status;
             if (type === 'receipt:detected') status = 'detected';
             if (type === 'receipt:success') status = 'completed';
@@ -102,11 +109,12 @@ export function useAppEvents() {
       }
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
-  }, []);
+  }, [queryClient]);
 
-  return { 
-    processingLogs, 
-    appLogs, 
-    isLoading: isLoadingProcessing || isLoadingLogs 
+  return {
+    processingLogs,
+    appLogs,
+    isLoading: isLoadingProcessing || isLoadingLogs
   };
 }
+

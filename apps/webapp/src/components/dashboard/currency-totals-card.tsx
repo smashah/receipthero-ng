@@ -1,5 +1,25 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { SlidingNumber } from '@/components/ui/sliding-number';
 import type { CurrencyTotalsResponse } from '@/lib/queries';
+
+// Get currency symbol for display
+function getCurrencySymbol(currency: string): string {
+  const symbols: Record<string, string> = {
+    USD: '$',
+    GBP: '£',
+    EUR: '€',
+    SAR: '﷼',
+    SEK: 'kr',
+    AED: 'د.إ',
+    TRY: '₺',
+    JPY: '¥',
+    CNY: '¥',
+    INR: '₹',
+    CAD: 'C$',
+    AUD: 'A$',
+  };
+  return symbols[currency.toUpperCase()] || currency;
+}
 
 interface CurrencyTotalsCardProps {
   currencyTotals: CurrencyTotalsResponse | undefined;
@@ -38,13 +58,13 @@ export function CurrencyTotalsCard({ currencyTotals, targetCurrencies }: Currenc
         >
           {filteredTotals.map((item, index) => (
             <div key={item.currency} className={`space-y-1 ${index > 0 ? 'border-l pl-4' : ''}`}>
-              <span className="text-3xl font-bold tracking-tight">
-                {new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency: item.currency,
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                }).format(item.total)}
+              <span className="text-3xl font-bold tracking-tight flex items-baseline gap-0.5">
+                <span className="text-xl">{getCurrencySymbol(item.currency)}</span>
+                <SlidingNumber 
+                  number={Math.round(item.total)} 
+                  thousandSeparator=","
+                  transition={{ stiffness: 150, damping: 25, mass: 0.5 }}
+                />
               </span>
               <p className="text-xs text-muted-foreground uppercase font-medium">
                 {item.currency}
@@ -56,4 +76,3 @@ export function CurrencyTotalsCard({ currencyTotals, targetCurrencies }: Currenc
     </Card>
   );
 }
-
