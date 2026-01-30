@@ -2,6 +2,7 @@ export * from './db';
 export * from './db/schema';
 export * from './services/bridge';
 export * from './services/config';
+export * from './services/ecb';
 export * from './services/ocr';
 export * from './services/paperless';
 export * from './services/retry-queue';

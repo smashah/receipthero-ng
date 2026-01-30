@@ -1,11 +1,27 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { ConfigSchema, PartialConfigSchema } from '@sm-rn/shared/schemas';
+import { currencies } from '@sm-rn/shared/currencies';
 import { loadConfig, CONFIG_PATH } from '@sm-rn/core';
 import * as fs from 'fs';
 import * as path from 'path';
 
 const config = new Hono();
+
+// GET /api/config/currencies - Get available currencies
+config.get('/currencies', (c) => {
+  // Extract currency codes and names from the shared list
+  const currencyList = Object.entries(currencies)
+    .filter(([code]) => code.length === 3) // Filter out non-standard entries like "Abkhazia"
+    .map(([code, info]) => ({
+      code,
+      name: info.name,
+      symbol: info.symbol,
+    }))
+    .sort((a, b) => a.code.localeCompare(b.code));
+
+  return c.json({ success: true, currencies: currencyList });
+});
 
 // Helper to mask API keys
 function maskApiKey(key: string | undefined): string {
@@ -43,7 +59,7 @@ function deepMerge(target: any, source: any): any {
 config.get('/', (c) => {
   try {
     const cfg = loadConfig();
-    
+
     // Mask sensitive data
     const masked = {
       ...cfg,
@@ -67,7 +83,7 @@ config.get('/', (c) => {
     return c.json(masked);
   } catch (error) {
     return c.json(
-      { 
+      {
         success: false,
         error: {
           name: 'ServerError',
@@ -93,8 +109,8 @@ config.patch('/', zValidator('json', PartialConfigSchema), async (c) => {
       const parseResult = ConfigSchema.safeParse(partialConfig);
       if (!parseResult.success) {
         return c.json(
-          { 
-            success: false, 
+          {
+            success: false,
             error: {
               name: 'ValidationError',
               message: 'First-time setup requires all required fields',
@@ -114,8 +130,8 @@ config.patch('/', zValidator('json', PartialConfigSchema), async (c) => {
     const parseResult = ConfigSchema.safeParse(mergedConfig);
     if (!parseResult.success) {
       return c.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: {
             name: 'ValidationError',
             message: 'Invalid configuration after merge',
@@ -138,11 +154,11 @@ config.patch('/', zValidator('json', PartialConfigSchema), async (c) => {
     return c.json({ success: true, message: 'Configuration saved' });
   } catch (error) {
     return c.json(
-      { 
+      {
         success: false,
-        error: { 
+        error: {
           name: 'ServerError',
-          message: error instanceof Error ? error.message : String(error) 
+          message: error instanceof Error ? error.message : String(error)
         }
       },
       500

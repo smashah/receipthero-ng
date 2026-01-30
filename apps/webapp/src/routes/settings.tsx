@@ -31,7 +31,8 @@ import {
   useConfig, 
   useSaveConfig, 
   useTestPaperless, 
-  useTestTogether 
+  useTestTogether,
+  useAvailableCurrencies
 } from '../lib/queries'
 import { FetchError, type ZodIssue } from '../lib/api'
 import { type Config, PartialConfigSchema } from '@sm-rn/shared/schemas'
@@ -48,14 +49,6 @@ import {
   useComboboxAnchor,
 } from '../components/ui/combobox'
 
-// Common currencies supported by ECB exchange rates
-const AVAILABLE_CURRENCIES = [
-  'GBP', 'USD', 'JPY', 'CHF', 'AUD', 'CAD', 'CNY', 'HKD', 'NZD', 'SEK',
-  'KRW', 'SGD', 'NOK', 'MXN', 'INR', 'RUB', 'ZAR', 'TRY', 'BRL', 'TWD',
-  'DKK', 'PLN', 'THB', 'IDR', 'HUF', 'CZK', 'CLP', 'PHP', 'AED',
-  'SAR', 'MYR', 'RON', 'BGN', 'ISK', 'HRK'
-]
-
 export const Route = createFileRoute('/settings')({
   component: SettingsPage,
 })
@@ -66,6 +59,7 @@ function SettingsPage() {
   const saveConfigMutation = useSaveConfig()
   const testPaperlessMutation = useTestPaperless()
   const testTogetherMutation = useTestTogether()
+  const { data: availableCurrencies = [] } = useAvailableCurrencies()
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -570,7 +564,7 @@ function SettingsPage() {
                     <div className="grid gap-2">
                       <Label>Target Currencies</Label>
                       <Combobox
-                        items={AVAILABLE_CURRENCIES}
+                        items={availableCurrencies}
                         multiple
                         value={localConfig.processing.currencyConversion?.targetCurrencies || []}
                         onValueChange={(currencies) => handleCurrencyConversionChange('targetCurrencies', currencies)}

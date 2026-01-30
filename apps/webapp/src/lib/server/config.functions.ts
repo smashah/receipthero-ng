@@ -56,3 +56,15 @@ export const saveConfig = createServerFn({ method: 'POST' })
             body: JSON.stringify(data),
         });
     }) as any) as (opts: { data: Partial<Config> }) => Promise<SaveConfigResponse>;
+
+export interface CurrenciesResponse {
+    success: boolean;
+    currencies: string[];
+}
+
+/**
+ * Get available ECB currencies - proxies to GET /api/config/currencies
+ */
+export const getAvailableCurrencies = createServerFn({ method: 'GET' }).handler(async () => {
+    return apiCall<CurrenciesResponse>('/api/config/currencies');
+});

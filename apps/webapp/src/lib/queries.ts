@@ -7,6 +7,7 @@ import {
   getHealthStatus,
   getConfig as getConfigFn,
   saveConfig as saveConfigFn,
+  getAvailableCurrencies as getAvailableCurrenciesFn,
   pauseWorker as pauseWorkerFn,
   resumeWorker as resumeWorkerFn,
   triggerScanAndWait,
@@ -54,6 +55,7 @@ export const healthKeys = {
 export const configKeys = {
   all: ['config'] as const,
   current: () => [...configKeys.all, 'current'] as const,
+  currencies: () => [...configKeys.all, 'currencies'] as const,
 };
 
 export const workerKeys = {
@@ -144,6 +146,20 @@ export function useConfig() {
   return useQuery({
     queryKey: configKeys.current(),
     queryFn: () => getConfigFn(),
+  });
+}
+
+/**
+ * Fetches available ECB currencies (cached on server for 24h).
+ */
+export function useAvailableCurrencies() {
+  return useQuery({
+    queryKey: configKeys.currencies(),
+    queryFn: async () => {
+      const response = await getAvailableCurrenciesFn();
+      return response.currencies;
+    },
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour on client
   });
 }
 

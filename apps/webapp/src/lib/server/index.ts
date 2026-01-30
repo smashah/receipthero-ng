@@ -1,6 +1,6 @@
 // Re-export all server functions for convenient importing
 export { getHealthStatus, type HealthStatus } from './health.functions';
-export { getConfig, saveConfig, type SaveConfigResponse } from './config.functions';
+export { getConfig, saveConfig, getAvailableCurrencies, type SaveConfigResponse, type CurrenciesResponse } from './config.functions';
 export {
     getWorkerStatus,
     pauseWorker,

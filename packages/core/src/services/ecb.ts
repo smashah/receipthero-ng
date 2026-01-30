@@ -38,6 +38,94 @@ export interface CurrencyConversionResult {
     ratesUsed: Record<string, number>; // Average rates used for each target currency
 }
 
+// Cache for available currencies (refreshed every 24 hours)
+let cachedCurrencies: string[] | null = null;
+let currencyCacheTime: number = 0;
+const CURRENCY_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Fetches the list of available currencies from ECB.
+ * Results are cached for 24 hours.
+ */
+export async function getAvailableCurrencies(): Promise<string[]> {
+    const now = Date.now();
+
+    // Return cached currencies if still valid
+    if (cachedCurrencies && (now - currencyCacheTime) < CURRENCY_CACHE_TTL) {
+        return cachedCurrencies;
+    }
+
+    // Fetch all currencies by using empty currency slot
+    // D..EUR.SP00.A = Daily, all currencies, against EUR, spot rate, average
+    const url = `${ECB_API_BASE}/D..EUR.SP00.A?lastNObservations=1&format=csvdata`;
+
+    logger.debug('Fetching available currencies from ECB');
+
+    try {
+        const response = await fetch(url, {
+            headers: { Accept: 'text/csv' },
+        });
+
+        if (!response.ok) {
+            logger.warn('ECB API returned non-OK status when fetching currencies', {
+                status: response.status,
+            });
+            return cachedCurrencies || getDefaultCurrencies();
+        }
+
+        const csv = await response.text();
+        const lines = csv.trim().split('\n');
+
+        if (lines.length < 2) {
+            return cachedCurrencies || getDefaultCurrencies();
+        }
+
+        // Parse header to find CURRENCY column
+        const headers = lines[0].split(',');
+        const currencyIdx = headers.indexOf('CURRENCY');
+
+        if (currencyIdx === -1) {
+            return cachedCurrencies || getDefaultCurrencies();
+        }
+
+        // Extract unique currencies, excluding historical/discontinued ones
+        const currencies = new Set<string>();
+        const discontinuedCurrencies = new Set(['CYP', 'EEK', 'GRD', 'LTL', 'LVL', 'MTL', 'SKK', 'SIT']);
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            const currency = values[currencyIdx];
+            if (currency && !discontinuedCurrencies.has(currency)) {
+                currencies.add(currency);
+            }
+        }
+
+        cachedCurrencies = Array.from(currencies).sort();
+        currencyCacheTime = now;
+
+        logger.debug('Cached available ECB currencies', { count: cachedCurrencies.length });
+
+        return cachedCurrencies;
+    } catch (error) {
+        logger.warn('Failed to fetch available currencies from ECB', {
+            error: error instanceof Error ? error.message : String(error),
+        });
+        return cachedCurrencies || getDefaultCurrencies();
+    }
+}
+
+/**
+ * Fallback list of common ECB-supported currencies.
+ */
+function getDefaultCurrencies(): string[] {
+    return [
+        'AUD', 'BGN', 'BRL', 'CAD', 'CHF', 'CNY', 'CZK', 'DKK',
+        'GBP', 'HKD', 'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JPY',
+        'KRW', 'MXN', 'MYR', 'NOK', 'NZD', 'PHP', 'PLN', 'RON',
+        'SEK', 'SGD', 'THB', 'TRY', 'USD', 'ZAR'
+    ];
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Week Boundary Calculation
 // ─────────────────────────────────────────────────────────────────────────────
