@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run --env-file=../../.env --watch src/index.ts --port 3001",
+    "dev": "sleep 3 && bun run --env-file=../../.env --watch src/index.ts --port 3001",
     "start": "bun run --env-file=../../.env src/index.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
