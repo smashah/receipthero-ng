@@ -143,6 +143,26 @@ The dashboard displays aggregated totals for each currency, giving you instant v
 
 ---
 
+## 📁 Document Type Detection
+
+By default, ReceiptHero looks for documents tagged with `receipt`. If you already have document types set up in Paperless-ngx, you can detect receipts by `document_type` instead:
+
+```json
+{
+  "processing": {
+    "useDocumentType": true,
+    "documentTypeName": "receipt"
+  }
+}
+```
+
+When enabled:
+- Documents with `document_type = "receipt"` are automatically processed
+- No need to manually tag receipts
+- Works with your existing Paperless-ngx document type workflow
+
+---
+
 ## 🧭 Roadmap
 
 - [x] AI-powered receipt extraction
@@ -150,6 +170,7 @@ The dashboard displays aggregated totals for each currency, giving you instant v
 - [x] Real-time dashboard with live logs
 - [x] Worker pause/resume controls
 - [x] Web-based configuration
+- [x] Document type detection (alternative to tag-based)
 - [ ] Receipt analytics and charts
 - [ ] Monthly/weekly spending reports
 - [ ] Export to CSV/Excel
