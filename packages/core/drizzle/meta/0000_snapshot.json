@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8186e1a5-0009-4c6e-959a-d3d6eb138099",
+  "id": "54e3c2ba-4bdf-4d12-b748-cd96cfe91c05",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "logs": {
@@ -312,6 +312,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": false
+        },
+        "lastScanResult": {
+          "name": "lastScanResult",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "updatedAt": {
           "name": "updatedAt",

@@ -32,9 +32,13 @@ async function workerLoop() {
         logger.info('Running automation cycle...');
       }
 
-      currentRunPromise = runAutomation();
-      await currentRunPromise;
-      currentRunPromise = null;
+      const scanResult = await runAutomation();
+
+      // Save scan results for API to read
+      await workerState.setScanResult({
+        ...scanResult,
+        timestamp: new Date().toISOString(),
+      });
 
       if (!isShuttingDown) {
         // Use shorter interval if waiting for potential manual triggers

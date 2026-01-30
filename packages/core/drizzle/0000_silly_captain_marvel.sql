@@ -48,5 +48,6 @@ CREATE TABLE `worker_state` (
 	`pausedAt` text,
 	`pauseReason` text,
 	`scanRequested` integer DEFAULT false NOT NULL,
+	`lastScanResult` text,
 	`updatedAt` text NOT NULL
 );

@@ -17,6 +17,11 @@ if (!fs.existsSync(dir)) {
 
 logger.lifecycle('🗄️', `Using database at: ${DB_PATH}`);
 const sqlite = new Database(DB_PATH, { create: true });
+
+// Enable WAL mode for better concurrency (prevents "database is locked" errors)
+sqlite.run('PRAGMA journal_mode = WAL;');
+sqlite.run('PRAGMA busy_timeout = 5000;'); // Wait up to 5 seconds if locked
+
 export const db = drizzle(sqlite, { schema });
 
 export { schema };

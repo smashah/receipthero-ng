@@ -13,8 +13,8 @@ import {
   Play,
   RotateCcw,
   Trash2,
-  SkipForward,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -67,7 +67,23 @@ function DashboardPage() {
 
   const handleRefresh = () => {
     refetchHealth();
-    triggerScan.mutate(); // Trigger worker to scan for new documents
+    triggerScan.mutate(undefined, {
+      onSuccess: (data) => {
+        const result = data.scanResult;
+        if (result && result.documentsQueued > 0) {
+          toast.success(`Found ${result.documentsQueued} document${result.documentsQueued > 1 ? 's' : ''} to process`, {
+            description: `${result.documentsFound} new receipt${result.documentsFound !== 1 ? 's' : ''} detected`,
+          });
+        } else if (result) {
+          toast.info('No new documents found');
+        }
+      },
+      onError: (error) => {
+        toast.error('Scan failed', {
+          description: error.message,
+        });
+      },
+    });
   };
 
   const formatTime = (date: Date) => {
@@ -185,9 +201,14 @@ function DashboardPage() {
                 ⭐ Star
               </Button>
             </a>
-            <Button variant="outline" size="sm" onClick={handleRefresh}>
-              <RefreshCw className={cn("h-4 w-4 mr-2", isHealthLoading && "animate-spin")} />
-              Refresh
+            <Button 
+              variant={triggerScan.isPending ? "secondary" : "outline"} 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={triggerScan.isPending || isHealthLoading}
+            >
+              <RefreshCw className={cn("h-4 w-4 mr-2", (triggerScan.isPending || isHealthLoading) && "animate-spin")} />
+              {triggerScan.isPending ? "Scanning..." : "Refresh"}
             </Button>
             <Link to="/settings">
               <Button>

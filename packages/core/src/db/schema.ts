@@ -50,6 +50,7 @@ export const workerStateSchema = sqliteTable('worker_state', {
   pausedAt: text('pausedAt'), // ISO date string when paused
   pauseReason: text('pauseReason'), // Optional reason for pause
   scanRequested: integer('scanRequested', { mode: 'boolean' }).notNull().default(false), // Flag to trigger immediate scan
+  lastScanResult: text('lastScanResult'), // JSON string with scan results (documentsFound, documentsQueued, etc.)
   updatedAt: text('updatedAt').notNull(),
 });
 

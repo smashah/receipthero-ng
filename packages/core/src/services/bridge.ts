@@ -531,7 +531,11 @@ export async function processPaperlessDocument(
  * 2. Process each document
  * 3. Process documents from retry queue
  */
-export async function runAutomation() {
+export async function runAutomation(): Promise<{
+  documentsFound: number;
+  documentsQueued: number;
+  documentsSkipped: number;
+}> {
   logger.info('Starting automation cycle...');
 
   // Load configuration
@@ -545,7 +549,7 @@ export async function runAutomation() {
     });
   } catch (error: any) {
     logger.error('Failed to load configuration', { error: error.message });
-    return;
+    return { documentsFound: 0, documentsQueued: 0, documentsSkipped: 0 };
   }
 
   // Initialize Paperless client
@@ -577,7 +581,7 @@ export async function runAutomation() {
       error: error.message,
       hint: 'Check Paperless connection and API key'
     });
-    return;
+    return { documentsFound: 0, documentsQueued: 0, documentsSkipped: 0 };
   }
 
   for (const doc of unprocessed) {
@@ -599,5 +603,12 @@ export async function runAutomation() {
     }
   }
 
+  const documentsQueued = unprocessed.length + readyForRetry.length;
   logger.info('Automation cycle complete');
+
+  return {
+    documentsFound: unprocessed.length,
+    documentsQueued,
+    documentsSkipped: 0, // Could track skipped docs in future
+  };
 }

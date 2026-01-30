@@ -188,14 +188,25 @@ export function useResumeWorker() {
 }
 
 /**
- * Triggers an immediate worker scan.
+ * Triggers an immediate worker scan and waits for completion.
  */
 export function useTriggerScan() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: () =>
-      fetchApi<{ success: boolean; message: string }>('/api/worker/scan', {
+      fetchApi<{
+        success: boolean;
+        message: string;
+        consumed: boolean;
+        durationMs: number;
+        scanResult: {
+          documentsFound: number;
+          documentsQueued: number;
+          documentsSkipped: number;
+          timestamp: string;
+        } | null;
+      }>('/api/worker/scan', {
         method: 'POST',
       }),
     onSuccess: () => {

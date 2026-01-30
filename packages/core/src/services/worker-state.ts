@@ -142,6 +142,107 @@ export class WorkerStateService {
     }
     return false;
   }
+
+  /**
+   * Trigger a scan and wait for the worker to pick it up.
+   * Returns when the scan has been consumed or timeout is reached.
+   * Ensures a minimum wait time for better UX.
+   */
+  async triggerScanAndWait(options?: {
+    timeoutMs?: number;
+    minWaitMs?: number;
+    pollIntervalMs?: number;
+  }): Promise<{
+    consumed: boolean; durationMs: number; scanResult: {
+      documentsFound: number;
+      documentsQueued: number;
+      documentsSkipped: number;
+      timestamp: string;
+    } | null
+  }> {
+    const timeoutMs = options?.timeoutMs ?? 30000; // 30 second timeout
+    const minWaitMs = options?.minWaitMs ?? 1000;  // Minimum 1 second
+    const pollIntervalMs = options?.pollIntervalMs ?? 200; // Poll every 200ms
+
+    const startTime = Date.now();
+
+    // Trigger the scan
+    await this.triggerScan();
+
+    // Poll until scan is consumed or timeout
+    let consumed = false;
+    while (Date.now() - startTime < timeoutMs) {
+      const state = await db
+        .select()
+        .from(schema.workerStateSchema)
+        .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+        .get();
+
+      // If scanRequested is false, the worker has picked it up
+      if (!state?.scanRequested) {
+        consumed = true;
+        break;
+      }
+
+      // Wait before next poll
+      await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+    }
+
+    // Ensure minimum wait time for better UX
+    const elapsed = Date.now() - startTime;
+    if (elapsed < minWaitMs) {
+      await new Promise(resolve => setTimeout(resolve, minWaitMs - elapsed));
+    }
+
+    return {
+      consumed,
+      durationMs: Date.now() - startTime,
+      scanResult: consumed ? await this.getLastScanResult() : null,
+    };
+  }
+
+  /**
+   * Set the result of the last scan (called by the worker after each scan).
+   */
+  async setScanResult(result: {
+    documentsFound: number;
+    documentsQueued: number;
+    documentsSkipped: number;
+    timestamp: string;
+  }): Promise<void> {
+    await db
+      .update(schema.workerStateSchema)
+      .set({
+        lastScanResult: JSON.stringify(result),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+      .run();
+  }
+
+  /**
+   * Get the result of the last scan.
+   */
+  async getLastScanResult(): Promise<{
+    documentsFound: number;
+    documentsQueued: number;
+    documentsSkipped: number;
+    timestamp: string;
+  } | null> {
+    const state = await db
+      .select()
+      .from(schema.workerStateSchema)
+      .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+      .get();
+
+    if (!state?.lastScanResult) return null;
+
+    try {
+      return JSON.parse(state.lastScanResult);
+    } catch {
+      return null;
+    }
+  }
 }
 
 // Singleton instance

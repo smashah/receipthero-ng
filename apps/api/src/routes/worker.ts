@@ -53,13 +53,21 @@ worker.post('/resume', async (c) => {
   }
 });
 
-// POST /api/worker/scan - Trigger an immediate scan
+// POST /api/worker/scan - Trigger an immediate scan and wait for pickup
 worker.post('/scan', async (c) => {
   try {
-    await workerState.triggerScan();
+    const result = await workerState.triggerScanAndWait({
+      timeoutMs: 30000,  // 30 second timeout
+      minWaitMs: 1000,   // Minimum 1 second for UX
+      pollIntervalMs: 200,
+    });
+
     return c.json({
       success: true,
-      message: 'Scan triggered',
+      message: result.consumed ? 'Scan completed' : 'Scan triggered (worker may be busy)',
+      consumed: result.consumed,
+      durationMs: result.durationMs,
+      scanResult: result.scanResult,
     });
   } catch (error) {
     return c.json({ success: false, error: String(error) }, 500);
