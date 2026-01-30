@@ -13,7 +13,6 @@ import {
   Play,
   RotateCcw,
   Trash2,
-  Coins,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';

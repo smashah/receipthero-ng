@@ -17,6 +17,9 @@ export const ConfigSchema = z.object({
     skippedTag: z.string().default("ai-skipped"),
     maxRetries: z.number().int().positive().default(3),
     retryStrategy: z.enum(['full', 'partial']).default('partial'),
+    // Document detection mode
+    useDocumentType: z.boolean().default(false),  // Use document_type instead of tag for detection
+    documentTypeName: z.string().default('receipt'), // Name of document type to filter by
     // Feature toggles
     updateContent: z.boolean().default(true),    // Normalize and update document content
     addJsonPayload: z.boolean().default(true),   // Add receipt JSON as custom field
@@ -61,6 +64,8 @@ export const PartialConfigSchema = z.object({
     skippedTag: z.string().optional(),
     maxRetries: z.number().int().positive().optional(),
     retryStrategy: z.enum(['full', 'partial']).optional(),
+    useDocumentType: z.boolean().optional(),
+    documentTypeName: z.string().optional(),
     updateContent: z.boolean().optional(),
     addJsonPayload: z.boolean().optional(),
     autoTag: z.boolean().optional(),

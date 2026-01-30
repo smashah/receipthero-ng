@@ -293,23 +293,48 @@ export class PaperlessClient {
     }
   }
 
-  async getUnprocessedDocuments(
-    processedTagName: string = this.config.processedTagName,
-    receiptTagName: string = "receipt"
-  ) {
-    // First, find the tag IDs
+  async getUnprocessedDocuments(options: {
+    processedTagName?: string;
+    receiptTagName?: string;
+    useDocumentType?: boolean;
+    documentTypeName?: string;
+  } = {}) {
+    const {
+      processedTagName = this.config.processedTagName,
+      receiptTagName = "receipt",
+      useDocumentType = false,
+      documentTypeName = "receipt",
+    } = options;
+
+    // Find processed tag ID (we always need this to exclude processed docs)
     const tags = await this.getTags();
     const processedTag = tags.find((t: any) => t.name.toLowerCase() === processedTagName.toLowerCase());
-    const receiptTag = tags.find((t: any) => t.name.toLowerCase() === receiptTagName.toLowerCase());
 
-    // Search for documents that HAVE the receipt tag AND DON'T have the processed tag
     let queryParts: string[] = [];
-    if (receiptTag) {
-      queryParts.push(`tags__id__all=${receiptTag.id}`);
+
+    if (useDocumentType) {
+      // Filter by document_type instead of tag
+      const docType = await this.findDocumentTypeByName(documentTypeName);
+      if (docType) {
+        queryParts.push(`document_type__id=${docType.id}`);
+        console.log(`[DEBUG] Filtering by document_type "${documentTypeName}" (ID: ${docType.id})`);
+      } else {
+        console.warn(`[WARN] Document type "${documentTypeName}" not found, returning no documents`);
+        return [];
+      }
+    } else {
+      // Filter by receipt tag (original behavior)
+      const receiptTag = tags.find((t: any) => t.name.toLowerCase() === receiptTagName.toLowerCase());
+      if (receiptTag) {
+        queryParts.push(`tags__id__all=${receiptTag.id}`);
+      }
     }
+
+    // Always exclude processed documents
     if (processedTag) {
       queryParts.push(`tags__id__none=${processedTag.id}`);
     }
+
     const query = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
 
     let allDocs: any[] = [];
@@ -405,6 +430,76 @@ export class PaperlessClient {
       console.error(`[ERROR] Failed to add note to document ${documentId}:`, error.message);
       throw error;
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Document Type Management
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  private documentTypeCache: Map<string, { id: number; name: string }> = new Map();
+  private lastDocumentTypeRefresh = 0;
+  private readonly DOCUMENT_TYPE_CACHE_LIFETIME = 60000; // 1 minute
+
+  /**
+   * Get all document types with pagination support and caching.
+   */
+  async getDocumentTypes(): Promise<Array<{ id: number; name: string }>> {
+    const now = Date.now();
+    if (this.documentTypeCache.size > 0 && (now - this.lastDocumentTypeRefresh) < this.DOCUMENT_TYPE_CACHE_LIFETIME) {
+      return Array.from(this.documentTypeCache.values());
+    }
+
+    this.documentTypeCache.clear();
+    let nextUrl: string | null = "/document_types/";
+    const allTypes: Array<{ id: number; name: string }> = [];
+
+    while (nextUrl) {
+      const response = await this.fetchApi(nextUrl);
+      const data = await response.json() as any;
+
+      if (!data?.results) break;
+
+      for (const docType of data.results) {
+        const typeEntry = { id: docType.id, name: docType.name };
+        allTypes.push(typeEntry);
+        this.documentTypeCache.set(docType.name.toLowerCase(), typeEntry);
+      }
+
+      if (data.next) {
+        try {
+          const nextUrlObj = new URL(data.next);
+          let relativePath = nextUrlObj.pathname;
+          if (relativePath.startsWith("/api")) {
+            relativePath = relativePath.substring(4);
+          }
+          nextUrl = relativePath + nextUrlObj.search;
+        } catch {
+          nextUrl = null;
+        }
+      } else {
+        nextUrl = null;
+      }
+    }
+
+    this.lastDocumentTypeRefresh = Date.now();
+    console.log(`[DEBUG] Document type cache refreshed. Found ${allTypes.length} types.`);
+    return allTypes;
+  }
+
+  /**
+   * Find a document type by name (case-insensitive).
+   */
+  async findDocumentTypeByName(name: string): Promise<{ id: number; name: string } | null> {
+    const normalizedName = name.toLowerCase();
+
+    // Check cache first
+    if (this.documentTypeCache.has(normalizedName)) {
+      return this.documentTypeCache.get(normalizedName)!;
+    }
+
+    // Refresh cache and try again
+    await this.getDocumentTypes();
+    return this.documentTypeCache.get(normalizedName) || null;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

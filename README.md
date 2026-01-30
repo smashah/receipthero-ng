@@ -1,114 +1,117 @@
-# ReceiptHero - Turborepo Monorepo
+# 🧾 ReceiptHero
 
-An open source receipt management system with AI-powered OCR, integrated with Paperless-NGX.
+[![GitHub Stars](https://img.shields.io/github/stars/smashah/receipthero-ng)](https://github.com/smashah/receipthero-ng)
+[![License](https://img.shields.io/github/license/smashah/receipthero-ng)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-ready-blue?logo=docker)](docker-compose.yml)
 
-## Architecture
+---
 
-This is a Turborepo monorepo with:
-- **`@sm-rn/api`**: Hono API backend (Bun runtime)
-- **`@sm-rn/webapp`**: TanStack Start frontend
-- **`@sm-rn/core`**: Core services (Paperless, OCR, currency conversion, logging)
-- **`@sm-rn/shared`**: Shared types and schemas
+**ReceiptHero** is an AI-powered receipt management companion for [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) that automatically extracts, organizes, and converts your receipts using advanced vision AI.
 
-## Tech Stack
+It transforms your chaotic receipt archive into a **searchable, structured database** with automatic vendor detection, item extraction, and **multi-currency conversion** — all through a beautiful real-time dashboard.
 
-**Backend:**
-- Hono (API framework)
-- Bun (JavaScript runtime)
-- Drizzle ORM + SQLite (database)
-- Together AI (LLM-powered OCR)
-- Llama 4 Maverick 17B (receipt extraction)
+> 💡 Just upload a receipt and let AI do the rest:
+> - Vendor name, date, and total amount extracted automatically
+> - Line items parsed with individual prices
+> - Currency converted to your preferred currencies
+> - Paperless-ngx updated with structured metadata
 
-**Frontend:**
-- React 19
-- TanStack Start / Router
-- TypeScript
+Powered by **Together AI's Llama 4 Maverick** vision model for accurate receipt parsing.
 
-**Infrastructure:**
-- Turborepo (monorepo orchestration)
-- pnpm workspaces
-- Docker + Docker Compose
+---
 
-## Features
+## ✨ Features
 
-### AI-Powered Receipt Extraction
-- Automatic OCR using Together AI's Llama model
-- Extracts vendor, amount, currency, date, items, and payment method
-- Updates Paperless-NGX with structured metadata
+### 🤖 AI-Powered Receipt Extraction
+- Automatic OCR using Together AI's Llama 4 Maverick vision model
+- Extracts vendor, amount, currency, date, payment method
+- Parses individual line items with prices
+- Handles receipts in any language
+- Smart retry with exponential backoff for reliability
 
-### Currency Conversion
-- Automatic conversion to configured target currencies
+<!-- TODO: Add screenshot of processed receipt in Paperless -->
+![Receipt Extraction Demo](docs/images/receipt-extraction.png)
+
+### 💱 Automatic Currency Conversion
+- Convert receipt amounts to multiple target currencies
 - Uses fawazahmed0 exchange-api with dual CDN fallback
 - Weekly average exchange rates for accuracy
-- Source currency always included in conversions
+- Source currency always preserved alongside conversions
+- Configure your preferred currencies (GBP, USD, EUR, SAR, etc.)
 
-### Dashboard
-- Real-time system health monitoring
-- **Currency Totals Card**: Aggregated totals in all configured currencies
-- Integration statistics (detected, processed, failed, skipped, in queue)
-- Worker control (pause/resume, retry all, clear queue)
-- Live processing logs via WebSocket
+<!-- TODO: Add screenshot of currency totals card -->
+![Currency Conversion](docs/images/currency-conversion.png)
 
-## Quick Start
+### 📊 Real-Time Dashboard
+- **System Health**: Live status of all integrations
+- **Currency Totals**: Aggregated spending in all your currencies
+- **Integration Stats**: Documents detected, processed, failed, queued
+- **Worker Control**: Pause, resume, retry all, clear queue
+- **Live Logs**: Real-time processing updates via WebSocket
 
-### Development
+<!-- TODO: Add dashboard screenshot -->
+![Dashboard](docs/images/dashboard.png)
+
+### ⚙️ Easy Configuration
+- Web-based settings page for all options
+- Test connections before saving
+- Dynamic currency list from live exchange rates
+- No config files needed (but supported)
+
+<!-- TODO: Add settings page screenshot -->
+![Settings](docs/images/settings.png)
+
+### 🔗 Seamless Paperless-ngx Integration
+- Automatic document title: `{Vendor} - {Amount} {Currency}`
+- Creates correspondents for vendors
+- Applies category tags automatically
+- Stores full receipt JSON in custom fields
+- Tags processed/failed documents for tracking
+
+---
+
+## 🚀 Quick Start
+
+### Docker (Recommended)
 
 ```bash
-# Install dependencies
-pnpm install
+# Clone the repository
+git clone https://github.com/smashah/receipthero-ng.git
+cd receipthero-ng
 
-# Start all services (API + Worker + Webapp)
-pnpm run dev
-
-# API: http://localhost:3001
-# Webapp: http://localhost:3000
-```
-
-### Production (Docker)
-
-```bash
-# Build and start
+# Start with Docker Compose
 docker compose up -d
 
-# Webapp accessible at http://localhost:3000
-# API runs internally on port 3001
+# Open the dashboard
+open http://localhost:3000
 ```
 
-## Configuration
+### First-Time Setup
 
-Configuration can be provided via:
-1. File: `/app/data/config.json` (highest priority)
-2. Environment variables (fallback)
-3. Schema defaults (fallback)
+1. Open the webapp at `http://localhost:3000`
+2. Click **Configure** to open settings
+3. Enter your Paperless-ngx host and API key
+4. Enter your Together AI API key
+5. (Optional) Enable currency conversion and select target currencies
+6. Click **Save** and you're ready!
 
-### Environment Variables
+> 💡 **Tip**: Click "Test Connection" buttons to verify your setup before saving.
 
-```bash
-# Required
-PAPERLESS_HOST=http://paperless:8000
-PAPERLESS_API_KEY=your-paperless-api-key
-TOGETHER_API_KEY=your-together-ai-api-key
+---
 
-# Optional
-SCAN_INTERVAL=300000  # 5 minutes
-RECEIPT_TAG=receipt
-PROCESSED_TAG=ai-processed
-FAILED_TAG=ai-failed
-MAX_RETRIES=3
+## 🐳 Docker Support
 
-# Optional: Rate Limiting
-RATE_LIMIT_ENABLED=false
-UPSTASH_URL=https://your-upstash-redis.upstash.io
-UPSTASH_TOKEN=your-upstash-token
+- Health monitoring with auto-restart
+- Persistent SQLite database
+- Graceful shutdown handling
+- Single container for API + Worker + Webapp
+- Works out of the box with minimal configuration
 
-# Optional: Observability
-HELICONE_ENABLED=false
-HELICONE_API_KEY=your-helicone-api-key
-```
+---
 
-### Currency Conversion
+## 💱 Currency Conversion
 
-Enable currency conversion in `config.json` or via the webapp settings:
+Enable automatic conversion to track spending in your preferred currencies:
 
 ```json
 {
@@ -121,7 +124,7 @@ Enable currency conversion in `config.json` or via the webapp settings:
 }
 ```
 
-When enabled, receipts will include converted amounts:
+Your receipts will include converted amounts:
 
 ```json
 {
@@ -136,7 +139,73 @@ When enabled, receipts will include converted amounts:
 }
 ```
 
-## API Endpoints
+The dashboard displays aggregated totals for each currency, giving you instant visibility into your spending across currencies.
+
+---
+
+## 🧭 Roadmap
+
+- [x] AI-powered receipt extraction
+- [x] Multi-currency conversion
+- [x] Real-time dashboard with live logs
+- [x] Worker pause/resume controls
+- [x] Web-based configuration
+- [ ] Receipt analytics and charts
+- [ ] Monthly/weekly spending reports
+- [ ] Export to CSV/Excel
+- [ ] Mobile-responsive design improvements
+- [ ] Batch reprocessing of old receipts
+
+---
+
+## 🔧 Development
+
+### Local Setup
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start all services (API + Worker + Webapp)
+pnpm run dev
+
+# API: http://localhost:3001
+# Webapp: http://localhost:3000
+```
+
+### Commands
+
+```bash
+pnpm run dev        # Start development servers
+pnpm run build      # Build for production
+pnpm run test       # Run tests
+pnpm turbo typecheck # Type check all packages
+```
+
+### Architecture
+
+This is a Turborepo monorepo:
+
+| Package | Description |
+|---------|-------------|
+| `@sm-rn/api` | Hono API backend (Bun runtime) |
+| `@sm-rn/webapp` | TanStack Start frontend |
+| `@sm-rn/worker` | Background processing worker |
+| `@sm-rn/core` | Core services (Paperless, OCR, currency, logging) |
+| `@sm-rn/shared` | Shared types and schemas |
+
+### Tech Stack
+
+**Backend:** Hono, Bun, Drizzle ORM, SQLite, Together AI  
+**Frontend:** React 19, TanStack Start/Router, TypeScript  
+**Infrastructure:** Turborepo, pnpm, Docker
+
+---
+
+## 📖 API Reference
+
+<details>
+<summary>Click to expand API endpoints</summary>
 
 ### Health & Configuration
 - `GET /api/health` - Health check with stats
@@ -165,70 +234,39 @@ When enabled, receipts will include converted amounts:
 ### Statistics
 - `GET /api/stats/currency-totals` - Get aggregated currency totals
 
-## How It Works
+</details>
 
-1. Worker polls Paperless-NGX for documents tagged with `receipt`
-2. Downloads document (prefers thumbnail for OCR)
-3. Sends to Together AI's Llama model for structured extraction
-4. **Currency Conversion** (if enabled): Converts to target currencies using weekly average rates
-5. Updates Paperless document with:
-   - Title: `{vendor} - {amount} {currency}`
-   - Created date from receipt
-   - Correspondent (vendor)
-   - Tags: `ai-processed`, category tag
-   - Custom field with full receipt JSON (including conversions)
-6. Failed documents retry with exponential backoff: 1min, 5min, 15min
-7. After max retries, documents are tagged as `ai-failed`
+---
 
-## Development Commands
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to open issues or submit PRs.
 
 ```bash
-# Run tests
-pnpm run test
-
-# Type check
-pnpm turbo run typecheck
-
-# Database migrations
-cd packages/core && pnpm run db:generate && pnpm run db:migrate
-
-# Build for production
-pnpm run build
+# Fork, clone, then:
+git checkout -b feature/YourFeature
+# After changes:
+git commit -m "Add YourFeature"
+git push origin feature/YourFeature
 ```
 
-## Project Structure
+---
 
-```
-receipthero-ng/
-├── apps/
-│   ├── api/              # Hono API server
-│   │   ├── src/
-│   │   │   ├── routes/   # API endpoints
-│   │   │   └── index.ts  # API server
-│   │   └── Dockerfile
-│   ├── webapp/           # TanStack Start frontend
-│   │   ├── src/
-│   │   │   ├── routes/   # File-based routing
-│   │   │   ├── components/
-│   │   │   └── lib/      # Queries, server functions
-│   │   └── Dockerfile
-│   └── worker/           # Background worker
-├── packages/
-│   ├── core/             # Core services
-│   │   └── src/
-│   │       ├── services/
-│   │       │   ├── bridge.ts       # Receipt processing pipeline
-│   │       │   ├── fawazahmed0.ts  # Currency conversion API
-│   │       │   ├── ecb.ts          # ECB API (backup)
-│   │       │   ├── ocr.ts          # Together AI integration
-│   │       │   └── paperless.ts    # Paperless-NGX client
-│   │       └── db/                 # Drizzle schema
-│   └── shared/           # Shared types & schemas
-├── docker-compose.yml
-├── turbo.json
-└── package.json
-```
+## 📄 License
 
-## License
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
-MIT
+---
+
+## 🙏 Support
+
+If ReceiptHero helps you manage your receipts, consider:
+- ⭐ Starring the repository
+- 🐛 Reporting bugs and suggesting features
+- 🤝 Contributing code or documentation
+
+---
+
+<p align="center">
+  Made with ❤️ for the Paperless-ngx community
+</p>

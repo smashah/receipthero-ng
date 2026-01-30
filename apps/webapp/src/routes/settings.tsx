@@ -26,6 +26,7 @@ import {
   CardTitle,
 } from '../components/ui/card'
 import { Separator } from '../components/ui/separator'
+import { Switch } from '../components/ui/switch'
 
 import { 
   useConfig, 
@@ -74,6 +75,8 @@ function SettingsPage() {
       skippedTag: 'ai-skipped',
       maxRetries: 3,
       retryStrategy: 'partial',
+      useDocumentType: false,
+      documentTypeName: 'receipt',
       updateContent: true,
       addJsonPayload: true,
       autoTag: true,
@@ -492,6 +495,40 @@ function SettingsPage() {
                     Partial retries skip AI extraction if receipt data was already captured.
                   </p>
                 </div>
+              </div>
+
+              {/* Document Detection Mode */}
+              <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="use-document-type" className="font-medium">Use Document Type</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      Detect receipts by document_type instead of tag (useful if you already have document types set up)
+                    </p>
+                  </div>
+                  <Switch
+                    id="use-document-type"
+                    checked={localConfig.processing.useDocumentType ?? false}
+                    onCheckedChange={(checked) => handleProcessingChange('useDocumentType', checked as any)}
+                  />
+                </div>
+                
+                {localConfig.processing.useDocumentType && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="document-type-name">Document Type Name</Label>
+                      <Input
+                        id="document-type-name"
+                        value={localConfig.processing.documentTypeName ?? 'receipt'}
+                        onChange={(e) => handleProcessingChange('documentTypeName', e.target.value)}
+                        placeholder="receipt"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Name of the document type to look for (case-insensitive)
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

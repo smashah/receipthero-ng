@@ -614,11 +614,21 @@ export async function runAutomation(): Promise<{
   // ─────────────────────────────────────────────────────────────────────────
   // PHASE 1: Process new unprocessed documents
   // ─────────────────────────────────────────────────────────────────────────
-  logger.debug(`Fetching unprocessed documents with tag "${config.processing.receiptTag}"...`);
+  const detectionMode = config.processing.useDocumentType ? 'document_type' : 'tag';
+  const detectionTarget = config.processing.useDocumentType
+    ? config.processing.documentTypeName
+    : config.processing.receiptTag;
+  logger.debug(`Fetching unprocessed documents using ${detectionMode} "${detectionTarget}"...`);
+
   let unprocessed: any[];
   try {
-    unprocessed = await client.getUnprocessedDocuments(undefined, config.processing.receiptTag);
-    logger.info(`Found ${unprocessed.length} unprocessed document(s) with tag "${config.processing.receiptTag}"`);
+    unprocessed = await client.getUnprocessedDocuments({
+      processedTagName: config.processing.processedTag,
+      receiptTagName: config.processing.receiptTag,
+      useDocumentType: config.processing.useDocumentType,
+      documentTypeName: config.processing.documentTypeName,
+    });
+    logger.info(`Found ${unprocessed.length} unprocessed document(s) using ${detectionMode} "${detectionTarget}"`);
   } catch (error: any) {
     logger.error('Failed to fetch unprocessed documents from Paperless', {
       error: error.message,
