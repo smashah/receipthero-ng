@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+// Schema for line items on a receipt
+export const LineItemSchema = z.object({
+  name: z.string(),
+  quantity: z.number().optional(),
+  unitPrice: z.number().optional(),
+  totalPrice: z.number(),
+});
+
 // Schema for a processed receipt
 export const ProcessedReceiptSchema = z.object({
   id: z.string(),
@@ -17,6 +25,11 @@ export const ProcessedReceiptSchema = z.object({
   thumbnail: z.string(),
   base64: z.string(),
   mimeType: z.string(),
+  // AI-generated fields for Paperless
+  title: z.string().optional(), // Human-readable document title
+  summary: z.string().optional(), // Text summary of the receipt
+  line_items: z.array(LineItemSchema).optional(), // Individual items on the receipt
+  suggested_tags: z.array(z.string()).optional(), // AI-suggested tags based on content
 });
 
 // Type exports
@@ -86,11 +99,11 @@ export interface ProcessingLog {
   updatedAt: string;
 }
 
-export type ProcessingEventType = 
-  | 'receipt:detected' 
-  | 'receipt:processing' 
-  | 'receipt:success' 
-  | 'receipt:failed' 
+export type ProcessingEventType =
+  | 'receipt:detected'
+  | 'receipt:processing'
+  | 'receipt:success'
+  | 'receipt:failed'
   | 'receipt:retry'
   | 'receipt:skipped';
 

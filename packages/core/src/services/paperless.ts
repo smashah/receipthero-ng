@@ -150,10 +150,10 @@ export class PaperlessClient {
     const normalizedName = tagName.toLowerCase();
 
     try {
-      // Try to create the tag
+      // Try to create the tag (owner: null makes it public/shared)
       const response = await this.fetchApi("/tags/", {
         method: "POST",
-        body: JSON.stringify({ name: tagName }),
+        body: JSON.stringify({ name: tagName, owner: null }),
       });
       const newTag = await response.json() as Tag;
       console.log(`[DEBUG] Successfully created tag "${tagName}" with ID ${newTag.id}`);
@@ -356,10 +356,144 @@ export class PaperlessClient {
     created?: string;
     correspondent?: number;
     tags?: number[];
+    custom_fields?: Array<{ field: number; value: string | number | boolean | null }>;
   }) {
     await this.fetchApi(`/documents/${id}/`, {
       method: "PATCH",
       body: JSON.stringify(updates),
     });
   }
+
+  /**
+   * Add a note to a document.
+   */
+  async addNote(documentId: number, note: string): Promise<void> {
+    console.log(`[DEBUG] Adding note to document ${documentId}, note length: ${note.length}`);
+    try {
+      await this.fetchApi(`/documents/${documentId}/notes/`, {
+        method: "POST",
+        body: JSON.stringify({ note }),
+      });
+      console.log(`[DEBUG] Successfully added note to document ${documentId}`);
+    } catch (error: any) {
+      console.error(`[ERROR] Failed to add note to document ${documentId}:`, error.message);
+      throw error;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Custom Field Management
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  private customFieldCache: Map<string, { id: number; name: string; data_type: string }> = new Map();
+  private lastCustomFieldRefresh = 0;
+  private readonly CUSTOM_FIELD_CACHE_LIFETIME = 60000; // 1 minute
+
+  /**
+   * Get all custom fields with pagination support.
+   */
+  async getCustomFields(): Promise<Array<{ id: number; name: string; data_type: string }>> {
+    const now = Date.now();
+    if (this.customFieldCache.size > 0 && (now - this.lastCustomFieldRefresh) < this.CUSTOM_FIELD_CACHE_LIFETIME) {
+      return Array.from(this.customFieldCache.values());
+    }
+
+    this.customFieldCache.clear();
+    let nextUrl: string | null = "/custom_fields/";
+    const allFields: Array<{ id: number; name: string; data_type: string }> = [];
+
+    while (nextUrl) {
+      const response = await this.fetchApi(nextUrl);
+      const data = await response.json() as any;
+
+      if (!data?.results) break;
+
+      for (const field of data.results) {
+        const fieldEntry = { id: field.id, name: field.name, data_type: field.data_type };
+        allFields.push(fieldEntry);
+        this.customFieldCache.set(field.name.toLowerCase(), fieldEntry);
+      }
+
+      if (data.next) {
+        try {
+          const nextUrlObj = new URL(data.next);
+          let relativePath = nextUrlObj.pathname;
+          if (relativePath.startsWith("/api")) {
+            relativePath = relativePath.substring(4);
+          }
+          nextUrl = relativePath + nextUrlObj.search;
+        } catch {
+          nextUrl = null;
+        }
+      } else {
+        nextUrl = null;
+      }
+    }
+
+    this.lastCustomFieldRefresh = Date.now();
+    console.log(`[DEBUG] Custom field cache refreshed. Found ${allFields.length} fields.`);
+    return allFields;
+  }
+
+  /**
+   * Find a custom field by name.
+   */
+  async findCustomFieldByName(name: string): Promise<{ id: number; name: string; data_type: string } | null> {
+    const normalizedName = name.toLowerCase();
+
+    // Check cache first
+    if (this.customFieldCache.has(normalizedName)) {
+      return this.customFieldCache.get(normalizedName)!;
+    }
+
+    // Refresh cache and try again
+    await this.getCustomFields();
+    return this.customFieldCache.get(normalizedName) || null;
+  }
+
+  /**
+   * Create a new custom field.
+   * @param name - Field name
+   * @param dataType - One of: string, url, date, boolean, integer, float, monetary, documentlink, select, longtext
+   */
+  async createCustomField(name: string, dataType: string = "longtext"): Promise<{ id: number; name: string; data_type: string }> {
+    console.log(`[DEBUG] Creating custom field "${name}" with type "${dataType}"`);
+    const response = await this.fetchApi("/custom_fields/", {
+      method: "POST",
+      body: JSON.stringify({ name, data_type: dataType }),
+    });
+    const field = await response.json() as any;
+    const fieldEntry = { id: field.id, name: field.name, data_type: field.data_type };
+    this.customFieldCache.set(name.toLowerCase(), fieldEntry);
+    console.log(`[DEBUG] Successfully created custom field "${name}" with ID ${field.id}`);
+    return fieldEntry;
+  }
+
+  /**
+   * Ensure a custom field exists, creating it if necessary.
+   * Returns the field ID.
+   */
+  async ensureCustomField(name: string, dataType: string = "longtext"): Promise<number> {
+    let field = await this.findCustomFieldByName(name);
+
+    if (!field) {
+      try {
+        field = await this.createCustomField(name, dataType);
+      } catch (error: any) {
+        // Handle race condition - field may have been created by another process
+        if (error.message?.includes("400")) {
+          // Force cache refresh and try to find again
+          this.lastCustomFieldRefresh = 0;
+          field = await this.findCustomFieldByName(name);
+          if (field) {
+            return field.id;
+          }
+        }
+        throw error;
+      }
+    }
+
+    return field.id;
+  }
 }
+
