@@ -166,7 +166,7 @@ export async function processPaperlessDocument(
       let fileSource: 'thumbnail' | 'raw';
 
       try {
-        fileBuffer = await client.getDocumentThumbnail(documentId);
+        fileBuffer = await client.getDocumentImage(documentId);
         fileSource = 'thumbnail';
         docLogger.info(` ✓ Downloaded thumbnail (${(fileBuffer.length / 1024).toFixed(1)} KB)`);
       } catch (thumbError: any) {
@@ -530,6 +530,8 @@ export async function processPaperlessDocument(
  * 1. Find unprocessed documents with receipt tag
  * 2. Process each document
  * 3. Process documents from retry queue
+ * 
+ * Note: Concurrency control is handled by the caller via workerState.acquireLock()
  */
 export async function runAutomation(): Promise<{
   documentsFound: number;
@@ -612,3 +614,4 @@ export async function runAutomation(): Promise<{
     documentsSkipped: 0, // Could track skipped docs in future
   };
 }
+

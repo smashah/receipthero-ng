@@ -351,6 +351,31 @@ export class PaperlessClient {
     return Buffer.from(arrayBuffer);
   }
 
+  async getOriginalDocument(id: number): Promise<Buffer> {
+    const res = await this.fetchApi(`/documents/${id}/download/?original=true`);
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
+  /**
+   * Get the best image representation of a document.
+   * Returns the original document if it's an image, otherwise returns the thumbnail.
+   */
+  async getDocumentImage(id: number): Promise<Buffer> {
+    const res = await this.fetchApi(`/documents/${id}/download/?original=true`);
+    const contentType = res.headers.get("content-type") || "";
+
+    // Check if the original document is an image
+    if (contentType.startsWith("image/")) {
+      const arrayBuffer = await res.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    }
+
+    // Original is not an image (e.g., PDF), return thumbnail instead
+    return this.getDocumentThumbnail(id);
+  }
+
+
   async updateDocument(id: number, updates: {
     title?: string;
     created?: string;

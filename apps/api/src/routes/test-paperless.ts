@@ -13,7 +13,6 @@ const TestPaperlessSchema = z.object({
 
 testPaperless.post('/', zValidator('json', TestPaperlessSchema), async (c) => {
   let { host, apiKey } = c.req.valid('json');
-  
   // Handle masked API key
   if (apiKey.includes('...')) {
     try {
@@ -26,7 +25,7 @@ testPaperless.post('/', zValidator('json', TestPaperlessSchema), async (c) => {
     }
   }
 
-  logger.debug(`Testing connection to ${host}`);
+  logger.debug(`Testing connection to ${host} with key ${apiKey}`);
   try {
     const client = new PaperlessClient({
       host,

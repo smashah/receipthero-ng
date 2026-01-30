@@ -243,6 +243,88 @@ export class WorkerStateService {
       return null;
     }
   }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Cross-Process Locking
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Attempt to acquire the automation lock.
+   * Returns true if lock was acquired, false if another process holds it.
+   * This is a cross-process safe lock using the database.
+   */
+  async acquireLock(): Promise<boolean> {
+    const state = await db
+      .select()
+      .from(schema.workerStateSchema)
+      .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+      .get();
+
+    // If already running, don't acquire
+    if (state?.isRunning) {
+      return false;
+    }
+
+    // Atomically set isRunning to true
+    await db
+      .update(schema.workerStateSchema)
+      .set({
+        isRunning: true,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+      .run();
+
+    return true;
+  }
+
+  /**
+   * Release the automation lock and record when the scan completed.
+   * Should always be called in a finally block.
+   */
+  async releaseLock(): Promise<void> {
+    await db
+      .update(schema.workerStateSchema)
+      .set({
+        isRunning: false,
+        lastScanCompletedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+      .run();
+  }
+
+  /**
+   * Get the number of milliseconds since the last scan completed.
+   * Returns Infinity if no scan has ever completed (so first scan always runs).
+   */
+  async getTimeSinceLastScan(): Promise<number> {
+    const state = await db
+      .select()
+      .from(schema.workerStateSchema)
+      .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+      .get();
+
+    if (!state?.lastScanCompletedAt) {
+      return Infinity; // No previous scan, should run immediately
+    }
+
+    const lastScan = new Date(state.lastScanCompletedAt).getTime();
+    return Date.now() - lastScan;
+  }
+
+  /**
+   * Check if the automation lock is currently held.
+   */
+  async isLocked(): Promise<boolean> {
+    const state = await db
+      .select()
+      .from(schema.workerStateSchema)
+      .where(eq(schema.workerStateSchema.id, WorkerStateService.STATE_ID))
+      .get();
+
+    return state?.isRunning ?? false;
+  }
 }
 
 // Singleton instance

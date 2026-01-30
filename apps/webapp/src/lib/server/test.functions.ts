@@ -23,7 +23,8 @@ async function apiCall<T>(path: string, options: RequestInit = {}): Promise<T> {
         throw new Error(error.error || error.message || `API error: ${response.status}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    return data;
 }
 
 export interface TestConnectionResponse {
@@ -36,22 +37,20 @@ export interface TestConnectionResponse {
  * Test Paperless connection - proxies to POST /api/config/test-paperless
  */
 export const testPaperlessConnection = createServerFn({ method: 'POST' })
-    .inputValidator((input: { host: string; apiKey: string }) => input)
     .handler((async ({ data }: any) => {
         return apiCall<TestConnectionResponse>('/api/config/test-paperless', {
             method: 'POST',
             body: JSON.stringify(data),
-        });
-    }) as any) as (opts: { data: { host: string; apiKey: string } }) => Promise<TestConnectionResponse>;
+        })
+    }))
 
 /**
  * Test Together AI connection - proxies to POST /api/config/test-together
  */
 export const testTogetherConnection = createServerFn({ method: 'POST' })
-    .inputValidator((input: { apiKey: string }) => input)
     .handler((async ({ data }: any) => {
         return apiCall<TestConnectionResponse>('/api/config/test-together', {
             method: 'POST',
             body: JSON.stringify(data),
         });
-    }) as any) as (opts: { data: { apiKey: string } }) => Promise<TestConnectionResponse>;
+    }));
