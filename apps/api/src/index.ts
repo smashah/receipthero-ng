@@ -13,6 +13,7 @@ import queue from './routes/queue'
 import ws from './routes/ws'
 import { websocket } from 'hono/bun'
 import { createLogger } from '@sm-rn/core'
+import { logger as honoLogger } from 'hono/logger'
 
 const logger = createLogger('api')
 const app = new Hono()
@@ -25,16 +26,17 @@ app.get('/', (c) => c.text('ReceiptHero API'))
 
 // Mount routes
 app.route('/api/health', health)
+app.route('/api/events', events)
+app.route('/ws', ws)
+app.use(honoLogger())
 app.route('/api/config', config)
 app.route('/api/config/test-paperless', testPaperless)
 app.route('/api/config/test-together', testTogether)
 app.route('/api/ocr', ocr)
-app.route('/api/events', events)
 app.route('/api/documents', documents)
 app.route('/api/processing', processing)
 app.route('/api/worker', worker)
 app.route('/api/queue', queue)
-app.route('/ws', ws)
 
 // Export app and type for RPC
 export default app

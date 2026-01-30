@@ -46,21 +46,43 @@ export const getProcessingLogs = createServerFn({ method: 'GET' }).handler(async
 /**
  * Get logs for a specific document - proxies to GET /api/events/logs/document/:id
  */
-export const getDocumentLogs = createServerFn({ method: 'GET' })
+export const getDocumentLogs = createServerFn({ method: 'POST' })
     .inputValidator((input: { documentId: number }) => input)
-    .handler((async ({ data }: any) => {
-        return apiCall<LogEntry[]>(`/api/events/logs/document/${data.documentId}`);
-    }) as any) as (opts: { data: { documentId: number } }) => Promise<LogEntry[]>;
+    .handler(async (ctx: { data: { documentId: number } }) => {
+        const documentId = ctx.data.documentId;
+        console.log('[getDocumentLogs] Received documentId:', documentId);
+
+        if (!documentId) {
+            console.log('[getDocumentLogs] No documentId provided, returning empty array');
+            return [];
+        }
+
+        try {
+            const result = await apiCall<LogEntry[]>(`/api/events/logs/document/${documentId}`);
+            console.log('[getDocumentLogs] Got', result?.length ?? 0, 'logs');
+            return result ?? [];
+        } catch (error) {
+            console.error('[getDocumentLogs] Error:', error);
+            return [];
+        }
+    });
 
 /**
  * Get app logs - proxies to GET /api/events/logs
  */
-export const getAppLogs = createServerFn({ method: 'GET' })
+export const getAppLogs = createServerFn({ method: 'POST' })
     .inputValidator((input: { source?: string }) => input)
-    .handler((async ({ data }: any) => {
-        const queryParam = data?.source ? `?source=${data.source}` : '';
-        return apiCall<LogEntry[]>(`/api/events/logs${queryParam}`);
-    }) as any) as (opts: { data: { source?: string } }) => Promise<LogEntry[]>;
+    .handler(async (ctx: { data: { source?: string } }) => {
+        const source = ctx.data.source;
+        const queryParam = source ? `?source=${source}` : '';
+        try {
+            const result = await apiCall<LogEntry[]>(`/api/events/logs${queryParam}`);
+            return result ?? [];
+        } catch (error) {
+            console.error('[getAppLogs] Error:', error);
+            return [];
+        }
+    });
 
 /**
  * Retry document processing - proxies to POST /api/processing/:id/retry

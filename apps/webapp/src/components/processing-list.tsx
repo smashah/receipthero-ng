@@ -119,6 +119,22 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
               {log.fileName || `Document #${log.documentId}`}
             </DialogTitle>
             <div className="flex items-center gap-2 mr-6">
+              {isComplete && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleRetry('full')}
+                  disabled={retryMutation.isPending}
+                  title="Reprocess this document (force re-extraction)"
+                >
+                  {retryMutation.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  ) : (
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                  )}
+                  Reprocess
+                </Button>
+              )}
               {isFailed && (
                 <div className="flex items-center gap-1">
                   <Button
