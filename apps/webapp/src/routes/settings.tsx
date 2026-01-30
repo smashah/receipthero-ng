@@ -608,7 +608,7 @@ function SettingsPage() {
                       >
                         <ComboboxChips ref={currencyAnchor}>
                           <ComboboxValue>
-                            {(localConfig.processing.currencyConversion?.targetCurrencies || []).map((currency) => (
+                            {(localConfig.processing.currencyConversion?.targetCurrencies || ["GBP"]).map((currency) => (
                               <ComboboxChip key={currency}>{currency}</ComboboxChip>
                             ))}
                           </ComboboxValue>

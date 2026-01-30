@@ -3,10 +3,22 @@ import type { CurrencyTotalsResponse } from '@/lib/queries';
 
 interface CurrencyTotalsCardProps {
   currencyTotals: CurrencyTotalsResponse | undefined;
+  targetCurrencies?: string[];
 }
 
-export function CurrencyTotalsCard({ currencyTotals }: CurrencyTotalsCardProps) {
+export function CurrencyTotalsCard({ currencyTotals, targetCurrencies }: CurrencyTotalsCardProps) {
   if (!currencyTotals?.success || !currencyTotals.totals.length) {
+    return null;
+  }
+
+  // Filter to only show configured target currencies (if provided)
+  const filteredTotals = targetCurrencies?.length 
+    ? currencyTotals.totals.filter(item => 
+        targetCurrencies.map(c => c.toUpperCase()).includes(item.currency.toUpperCase())
+      )
+    : currencyTotals.totals;
+
+  if (!filteredTotals.length) {
     return null;
   }
 
@@ -21,10 +33,10 @@ export function CurrencyTotalsCard({ currencyTotals }: CurrencyTotalsCardProps) 
         <div 
           className="grid gap-4"
           style={{ 
-            gridTemplateColumns: `repeat(${Math.min(currencyTotals.totals.length, 5)}, minmax(0, 1fr))` 
+            gridTemplateColumns: `repeat(${Math.min(filteredTotals.length, 5)}, minmax(0, 1fr))` 
           }}
         >
-          {currencyTotals.totals.map((item, index) => (
+          {filteredTotals.map((item, index) => (
             <div key={item.currency} className={`space-y-1 ${index > 0 ? 'border-l pl-4' : ''}`}>
               <span className="text-3xl font-bold tracking-tight">
                 {new Intl.NumberFormat('en-US', {
@@ -44,3 +56,4 @@ export function CurrencyTotalsCard({ currencyTotals }: CurrencyTotalsCardProps) 
     </Card>
   );
 }
+

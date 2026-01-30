@@ -19,9 +19,9 @@ import { useRetryProcessing, useDocumentLogs } from '@/lib/queries';
 export function ProcessingList({ logs }: { logs: ProcessingLog[] }) {
   const [selectedLog, setSelectedLog] = useState<ProcessingLog | null>(null);
 
-  const activeLogs = logs.filter(l => l.status !== 'completed' && l.status !== 'failed');
+  const activeLogs = logs.filter(l => l.status !== 'completed' && l.status !== 'failed' && l.status !== 'skipped');
   const processedLogs = logs
-    .filter(l => l.status === 'completed' || l.status === 'failed')
+    .filter(l => l.status === 'completed' || l.status === 'failed' || l.status === 'skipped')
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 10);
 
@@ -304,15 +304,24 @@ function ProcessingItem({ log }: { log: ProcessingLog }) {
 
 function ProcessedItem({ log }: { log: ProcessingLog }) {
   const isSuccess = log.status === 'completed';
+  const isSkipped = log.status === 'skipped';
+  
+  const getIcon = () => {
+    if (isSuccess) return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+    if (isSkipped) return <XCircle className="h-4 w-4 text-amber-500" />;
+    return <XCircle className="h-4 w-4 text-destructive" />;
+  };
+
+  const getBadge = () => {
+    if (isSuccess) return <Badge variant="outline" className="text-[10px] h-5 px-1.5 uppercase">Success</Badge>;
+    if (isSkipped) return <Badge variant="outline" className="text-[10px] h-5 px-1.5 uppercase text-amber-600 border-amber-200 bg-amber-50">Skipped</Badge>;
+    return <Badge variant="destructive" className="text-[10px] h-5 px-1.5 uppercase">Failed</Badge>;
+  };
   
   return (
     <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50 text-sm animate-in fade-in duration-300">
       <div className="flex items-center gap-3">
-        {isSuccess ? (
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-        ) : (
-          <XCircle className="h-4 w-4 text-destructive" />
-        )}
+        {getIcon()}
         <span className="font-medium max-w-[150px] md:max-w-[300px] truncate">
           {log.vendor || log.fileName || `Document #${log.documentId}`}
         </span>
@@ -326,9 +335,7 @@ function ProcessedItem({ log }: { log: ProcessingLog }) {
         <span className="text-xs text-muted-foreground tabular-nums">
           {new Date(log.updatedAt).toLocaleTimeString()}
         </span>
-        <Badge variant={isSuccess ? 'outline' : 'destructive'} className="text-[10px] h-5 px-1.5 uppercase">
-          {isSuccess ? 'Success' : 'Failed'}
-        </Badge>
+        {getBadge()}
       </div>
     </div>
   );

@@ -44,7 +44,10 @@ function DashboardPage() {
           isTriggeringScan={workerActions.triggerScan.isPending}
         />
         <StatusCards health={health} config={config} />
-        <CurrencyTotalsCard currencyTotals={currencyTotalsQuery.data} />
+        <CurrencyTotalsCard 
+          currencyTotals={currencyTotalsQuery.data} 
+          targetCurrencies={config?.processing?.currencyConversion?.targetCurrencies}
+        />
         <IntegrationStatsCard stats={health?.stats} />
         <WorkerControlCard
           worker={health?.worker}

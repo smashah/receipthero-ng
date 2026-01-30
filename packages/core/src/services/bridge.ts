@@ -302,7 +302,7 @@ export async function processPaperlessDocument(
             weekRange: `${result.weekStart} to ${result.weekEnd}`
           });
         } else {
-          docLogger.debug(`Currency conversion returned no results (source may match targets)`);
+          docLogger.warn(`⚠ Currency conversion failed - could not fetch exchange rates for ${receipt.currency}`);
         }
       } catch (error: any) {
         // Non-fatal: log warning but continue processing

@@ -1,40 +1,17 @@
-$ bun test
-bun test v1.3.6 (d530ed99)
 
-src/__tests__/ocr.test.ts:
-(pass) OCR Route > POST /api/ocr requires base64Image [8.00ms]
-OCR extraction error: 79 | 
-80 |   if (!result.success) {
-81 |     const errors = result.error.issues
-82 |       .map((e) => `  - ${e.path.join('.')}: ${e.message}`)
-83 |       .join('\n');
-84 |     throw new Error(`Configuration validation failed:\n${errors}`);
-                   ^
-error: Configuration validation failed:
-  - paperless.host: Invalid input: expected string, received undefined
-  - paperless.apiKey: Invalid input: expected string, received undefined
-  - togetherAi.apiKey: Invalid input: expected string, received undefined
-      at loadConfig (/home/mhm/projects/community/receipthero-ng/apps/api/src/services/config.ts:84:15)
-      at <anonymous> (/home/mhm/projects/community/receipthero-ng/apps/api/src/routes/ocr.ts:21:20)
-      at <anonymous> (/home/mhm/projects/community/receipthero-ng/apps/api/src/routes/ocr.ts:16:60)
-      at dispatch (/home/mhm/projects/community/receipthero-ng/node_modules/.bun/hono@4.11.7/node_modules/hono/dist/compose.js:22:23)
-      at dispatch (/home/mhm/projects/community/receipthero-ng/node_modules/.bun/hono@4.11.7/node_modules/hono/dist/compose.js:6:32)
-      at <anonymous> (/home/mhm/projects/community/receipthero-ng/node_modules/.bun/hono@4.11.7/node_modules/hono/dist/validator/validator.js:81:18)
-      at async dispatch (/home/mhm/projects/community/receipthero-ng/node_modules/.bun/hono@4.11.7/node_modules/hono/dist/compose.js:22:23)
-      at async cors2 (/home/mhm/projects/community/receipthero-ng/node_modules/.bun/hono@4.11.7/node_modules/hono/dist/middleware/cors/index.js:79:11)
-      at async dispatch (/home/mhm/projects/community/receipthero-ng/node_modules/.bun/hono@4.11.7/node_modules/hono/dist/compose.js:22:23)
-      at async <anonymous> (/home/mhm/projects/community/receipthero-ng/node_modules/.bun/hono@4.11.7/node_modules/hono/dist/hono-base.js:301:31)
-      at async <anonymous> (/home/mhm/projects/community/receipthero-ng/apps/api/src/__tests__/ocr.test.ts:16:27)
+> @sm-rn/api@0.1.0 test /Users/Mohammed/projects/tools/receipthero-ng/apps/api
+> bun test
 
-(pass) OCR Route > POST /api/ocr accepts base64Image [6.00ms]
+bun test v1.3.7-canary.108 (ab3df344)
 
 src/__tests__/config.test.ts:
-(pass) Config Route > GET /api/config returns config with masked keys [3.00ms]
+08:53:44.823 🗄️  INFO  [DB       ] Using database at: ../../receipthero.db
+<-- GET /api/config
+--> GET /api/config [32m200[0m 4ms
+(pass) Config Route > GET /api/config returns config with masked keys [10.32ms]
 
-src/__tests__/health.test.ts:
-(pass) Health Route > GET /api/health returns health status [1.00ms]
-
- 4 pass
- 0 fail
- 9 expect() calls
-Ran 4 tests across 3 files. [126.00ms]
+src/__tests__/ocr.test.ts:
+<-- POST /api/ocr
+--> POST /api/ocr [33m400[0m 2ms
+(pass) OCR Route > POST /api/ocr requires base64Image [1.71ms]
+<-- POST /api/ocr

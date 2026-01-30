@@ -61,6 +61,7 @@ const CURRENCY_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 /**
  * Fetches data from the currency API with automatic fallback.
  * Tries primary CDN first (jsdelivr), falls back to pages.dev.
+ * If specific date fails, retries with 'latest'.
  *
  * @param endpoint The API endpoint (e.g., 'currencies/eur.min.json')
  * @param date Date in YYYY-MM-DD format, or 'latest'
@@ -97,6 +98,12 @@ async function fetchWithFallback<T>(endpoint: string, date: string = 'latest'): 
                 error: error instanceof Error ? error.message : String(error),
             });
         }
+    }
+
+    // If date-specific fetch failed and we weren't already using 'latest', try latest as fallback
+    if (dateParam !== 'latest') {
+        logger.debug('Date-specific fetch failed, falling back to latest rates', { originalDate: date });
+        return fetchWithFallback<T>(endpoint, 'latest');
     }
 
     logger.warn('All currency API attempts failed');

@@ -113,8 +113,10 @@ events.post('/', zValidator('json', ProcessingEventSchema), async (c) => {
     if (type === 'receipt:success') status = 'completed';
     if (type === 'receipt:failed') status = 'failed';
     if (type === 'receipt:retry') status = 'retrying';
+    if (type === 'receipt:skipped') status = 'skipped';
 
-    if (existing && existing.status !== 'completed' && existing.status !== 'failed') {
+    // Always update existing entry for same documentId (treat as file, not event log)
+    if (existing) {
       await db
         .update(schema.processingLogs)
         .set({

@@ -117,6 +117,15 @@ Extract all visible receipt data accurately. If information is not visible, use 
   }
 
   const parsedJson = JSON.parse(content);
+
+  // Strip 'conversions' field from each receipt - it's populated by currency service, not AI
+  // AI sometimes hallucinates this field with incorrect structure
+  if (parsedJson.receipts && Array.isArray(parsedJson.receipts)) {
+    for (const receipt of parsedJson.receipts) {
+      delete receipt.conversions;
+    }
+  }
+
   const validated = ReceiptExtractionSchema.safeParse(parsedJson);
 
   if (!validated.success) {

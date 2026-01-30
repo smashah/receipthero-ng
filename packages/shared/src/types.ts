@@ -83,7 +83,7 @@ export interface SpendingBreakdown {
 // Processing Events & Logs
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ProcessingStatus = 'detected' | 'processing' | 'completed' | 'failed' | 'retrying';
+export type ProcessingStatus = 'detected' | 'processing' | 'completed' | 'failed' | 'retrying' | 'skipped';
 
 export interface ProcessingLog {
   id: number;
