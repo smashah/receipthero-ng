@@ -40,8 +40,8 @@ app.route('/api/worker', worker)
 app.route('/api/queue', queue)
 app.route('/api/stats', stats)
 
-// Export app and type for RPC
-export default app
+// Export app for RPC type inference (named export to avoid Bun's auto-serve)
+export { app }
 export type AppType = typeof app
 
 // Start server only if this file is run directly
