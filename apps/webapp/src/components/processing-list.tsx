@@ -13,8 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { JsonViewer } from './devtools/json-viewer';
 import { CliOutput } from './ui/cli-output';
-import { API_BASE_URL } from '@/lib/api';
-import { useRetryProcessing, useDocumentLogs } from '@/lib/queries';
+import { useRetryProcessing, useDocumentLogs, useDocumentThumbnail, useDocumentImage } from '@/lib/queries';
 
 export function ProcessingList({ logs }: { logs: ProcessingLog[] }) {
   const [selectedLog, setSelectedLog] = useState<ProcessingLog | null>(null);
@@ -75,6 +74,8 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
 }) {
   const retryMutation = useRetryProcessing();
   const { data: documentLogs, isLoading: logsLoading } = useDocumentLogs(log?.documentId ?? null);
+  const { data: thumbnailData, isLoading: thumbnailLoading } = useDocumentThumbnail(log?.documentId ?? null);
+  const { data: imageData } = useDocumentImage(log?.documentId ?? null);
   
   if (!log) return null;
 
@@ -82,8 +83,13 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
   const isFailed = log.status === 'failed';
   const receiptData = log.receiptData ? JSON.parse(log.receiptData) : null;
 
-  const thumbnailUrl = `${API_BASE_URL}/api/documents/${log.documentId}/thumbnail`;
-  const originalUrl = `${API_BASE_URL}/api/documents/${log.documentId}/image`;
+  // Build data URLs from base64 responses
+  const thumbnailSrc = thumbnailData 
+    ? `data:${thumbnailData.contentType};base64,${thumbnailData.base64}` 
+    : undefined;
+  const originalSrc = imageData 
+    ? `data:${imageData.contentType};base64,${imageData.base64}` 
+    : undefined;
 
   const handleRetry = (strategy: 'full' | 'partial') => {
     retryMutation.mutate(
@@ -180,24 +186,30 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <Eye className="h-4 w-4" /> Document Preview
               </h3>
-              <a 
-                href={originalUrl} 
-                target="_blank" 
-                rel="noreferrer"
-                className="text-xs text-primary hover:underline flex items-center gap-1"
-              >
-                View Original <ExternalLink className="h-3 w-3" />
-              </a>
+              {originalSrc && (
+                <a 
+                  href={originalSrc} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                  download={`document-${log.documentId}`}
+                >
+                  View Original <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
             </div>
             <div className="flex-1 bg-white rounded-lg border shadow-inner overflow-auto flex items-center justify-center p-4">
-              <img 
-                src={thumbnailUrl} 
-                alt="Receipt Preview" 
-                className="max-w-full max-h-full object-contain shadow-md rounded-sm"
-                onError={(e) => {
-                  (e.target as any).src = 'https://placehold.co/400x600?text=Preview+Unavailable';
-                }}
-              />
+              {thumbnailLoading ? (
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              ) : thumbnailSrc ? (
+                <img 
+                  src={thumbnailSrc} 
+                  alt="Receipt Preview" 
+                  className="max-w-full max-h-full object-contain shadow-md rounded-sm"
+                />
+              ) : (
+                <div className="text-muted-foreground text-sm">Preview unavailable</div>
+              )}
             </div>
           </div>
 

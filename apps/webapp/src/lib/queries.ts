@@ -21,6 +21,8 @@ import {
   testPaperlessConnection,
   testTogetherConnection,
   getCurrencyTotals as getCurrencyTotalsFn,
+  getDocumentThumbnail,
+  getDocumentImage,
   type HealthStatus,
   type SaveConfigResponse,
   type TestConnectionResponse,
@@ -29,6 +31,7 @@ import {
   type QueueActionResponse,
   type TriggerScanResponse,
   type CurrencyTotalsResponse,
+  type DocumentImageResponse,
 } from './server';
 
 // Re-export types for convenience
@@ -42,6 +45,7 @@ export type {
   TriggerScanResponse,
   ProcessingLog,
   CurrencyTotalsResponse,
+  DocumentImageResponse,
 };
 export type { Config };
 
@@ -124,6 +128,32 @@ export function useDocumentLogs(documentId: number | null) {
     queryKey: ['document-logs', documentId],
     queryFn: () => getDocumentLogs({ data: { documentId: documentId! } }),
     enabled: !!documentId, // Only fetch when documentId is provided
+  });
+}
+
+/**
+ * Fetches document thumbnail via server function proxy.
+ * This allows fetching from internal Docker network when only webapp is exposed.
+ */
+export function useDocumentThumbnail(documentId: number | null) {
+  return useQuery({
+    queryKey: ['document-thumbnail', documentId],
+    queryFn: () => getDocumentThumbnail({ data: { documentId: documentId! } }),
+    enabled: !!documentId,
+    staleTime: 1000 * 60 * 60, // Cache thumbnail for 1 hour
+  });
+}
+
+/**
+ * Fetches document image via server function proxy.
+ * This allows fetching from internal Docker network when only webapp is exposed.
+ */
+export function useDocumentImage(documentId: number | null) {
+  return useQuery({
+    queryKey: ['document-image', documentId],
+    queryFn: () => getDocumentImage({ data: { documentId: documentId! } }),
+    enabled: !!documentId,
+    staleTime: 1000 * 60 * 60, // Cache image for 1 hour
   });
 }
 

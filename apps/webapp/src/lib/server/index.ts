@@ -38,3 +38,8 @@ export {
     type CurrencyTotal,
     type CurrencyTotalsResponse,
 } from './stats.functions';
+export {
+    getDocumentThumbnail,
+    getDocumentImage,
+    type DocumentImageResponse,
+} from './documents.functions';
