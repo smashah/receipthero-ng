@@ -32,7 +32,7 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/core/package.json ./packages/core/
 
 # Install all dependencies using pnpm with BuildKit cache
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --reporter ndjson
 
 # =============================
 # Runner stage
