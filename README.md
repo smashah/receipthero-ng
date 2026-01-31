@@ -74,17 +74,63 @@ Powered by **Together AI's Llama 4 Maverick** vision model for accurate receipt 
 
 ### Docker (Recommended)
 
+**Option A: Clone the repo**
+
 ```bash
-# Clone the repository
 git clone https://github.com/smashah/receipthero-ng.git
 cd receipthero-ng
+docker compose up -d
+open http://localhost:3000
+```
 
-# Start with Docker Compose
+**Option B: Deploy from pre-built image (fastest)**
+
+```bash
+# Create the directory structure in your services folder
+mkdir -p ~/services/receipthero/data
+
+# Create a minimal config file
+cat > ~/services/receipthero/data/config.json << 'EOF'
+{
+  "paperless": {
+    "host": "http://YOUR_PAPERLESS_IP:8000",
+    "apiKey": "YOUR_PAPERLESS_API_KEY"
+  }
+}
+EOF
+
+# Create docker-compose.yaml
+cat > ~/services/receipthero/docker-compose.yaml << 'EOF'
+services:
+  receipthero:
+    image: ghcr.io/smashah/receipthero-ng:latest
+    environment:
+      - DATABASE_PATH=/app/data/receipthero.db
+      - CONFIG_PATH=/app/data/config.json
+      - BUN_DEV_SERVER_PORT=3099
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "3000:3000" #Change the first number because most likely the 3000 port is already taken on your machine!
+    restart: unless-stopped
+EOF
+
+# Start the container
+cd ~/services/receipthero
 docker compose up -d
 
 # Open the dashboard
 open http://localhost:3000
 ```
+
+> 📁 **Directory Structure:**
+> ```
+> ~/services/receipthero/
+> ├── docker-compose.yaml
+> └── data/
+>     ├── config.json          # Your configuration
+>     └── receipthero.db       # Created automatically
+> ```
 
 ### First-Time Setup
 
