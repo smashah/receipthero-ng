@@ -46,7 +46,7 @@ export type AppType = typeof app
 
 // Start server only if this file is run directly
 if (import.meta.main) {
-  const port = parseInt(process.env.PORT || '3001', 10)
+  const port = parseInt(process.env.API_PORT || process.env.PORT || '3001', 10)
   logger.info(`🚀 API server starting on port ${port}...`)
 
   Bun.serve({

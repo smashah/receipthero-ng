@@ -8,12 +8,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "bun run src/db/migrate.ts",
     "db:setup": "bun run db:generate && bun run db:migrate"
   },
   "dependencies": {
     "@sm-rn/shared": "workspace:*",
-    "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.38.4",
     "together-ai": "catalog:",
     "zod": "catalog:",

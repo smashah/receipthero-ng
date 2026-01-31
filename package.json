@@ -37,6 +37,6 @@
     "db:nuke": "rm -rf ./receipthero.db && rm -rf ./packages/core/drizzle"
   },
   "devDependencies": {
-    "turbo": "^2.6.0"
+    "turbo": "^2.8.1"
   }
 }
