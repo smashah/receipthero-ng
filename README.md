@@ -20,6 +20,12 @@ Powered by **Together AI's Llama 4 Maverick** vision model for accurate receipt 
 
 ---
 
+## 🎬 See It In Action
+
+<video src="https://github.com/smashah/receipthero-ng/raw/main/docs/tutorial.mp4" controls width="100%"></video>
+
+---
+
 ## ✨ Features
 
 ### 🤖 AI-Powered Receipt Extraction
