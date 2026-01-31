@@ -81,7 +81,8 @@ jobs:
 
   merge-manifests:
     runs-on: ubuntu-latest
-    needs: [build-amd64, build-arm64]
+    # needs: [build-amd64, build-arm64]
+    needs: [build-amd64]
     permissions:
       contents: read
       packages: write
