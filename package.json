@@ -31,6 +31,7 @@
   "packageManager": "pnpm@10.28.1",
   "scripts": {
     "dev": "turbo run dev",
+    "start": "turbo run start",
     "build": "turbo run build",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",

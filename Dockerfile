@@ -63,8 +63,11 @@ COPY . .
 # Generate database migrations (doesn't need DB connection)
 RUN cd packages/core && bun run db:generate
 
+# Build webapp for production (required for vite preview)
+RUN cd apps/webapp && pnpm run build
+
 # Expose webapp port only - API (3001) and Worker are internal
 EXPOSE 3000
 
-# Default command - start dev server via turborepo
-CMD ["bun", "run", "dev"]
+# Default command - start production server via turborepo
+CMD ["pnpm", "run", "start"]

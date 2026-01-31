@@ -43,6 +43,22 @@
         "TOGETHER_API_KEY"
       ]
     },
+    "start": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": [
+        "^db:setup"
+      ],
+      "env": [
+        "PORT",
+        "API_URL",
+        "DATABASE_PATH",
+        "CONFIG_PATH",
+        "PAPERLESS_HOST",
+        "PAPERLESS_API_KEY",
+        "TOGETHER_API_KEY"
+      ]
+    },
     "test": {
       "dependsOn": [
         "^build"
