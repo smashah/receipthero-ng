@@ -22,7 +22,7 @@ Powered by **Together AI's Llama 4 Maverick** vision model for accurate receipt 
 
 ## 🎬 See It In Action
 
-[![Watch the tutorial](docs/images/dashboard.png)](docs/tutorial.mp4)
+[![Watch the tutorial](docs/images/dashboard.png)](https://youtu.be/LNlUDtD3og0)
 
 > 👆 **Click to watch the tutorial video**
 
