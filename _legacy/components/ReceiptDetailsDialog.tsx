@@ -38,9 +38,9 @@ export default function ReceiptDetailsDialog({
           </div>
 
           {/* Receipt Details */}
-          <div className="flex flex-col flex-1 gap-4">
+          <div className="flex flex-col flex-1 gap-4 min-h-0">
             {/* Header */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 flex-shrink-0">
               <h2 className="text-xl font-medium text-[#101828]">
                 {receipt.vendor}
               </h2>
@@ -49,8 +49,8 @@ export default function ReceiptDetailsDialog({
               </p>
             </div>
 
-            {/* Details List */}
-            <div className="flex flex-col gap-0">
+            {/* Details List - Scrollable */}
+            <div className="flex flex-col gap-0 flex-1 overflow-y-auto min-h-0">
                {/* Amount */}
                 <div className="flex flex-col gap-2 py-3 border-b border-gray-200">
                   <div className="flex justify-between items-center">

@@ -1,0 +1,12 @@
+services:
+  receipthero:
+    image: ghcr.io/smashah/receipthero-ng:latest
+    environment:
+      - DATABASE_PATH=/app/data/receipthero.db
+      - CONFIG_PATH=/app/data/config.json
+      - BUN_DEV_SERVER_PORT=3099  # Move Bun's internal dev server out of the way
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "3000:3000"  # Webapp only - API/Worker internal
+    restart: unless-stopped

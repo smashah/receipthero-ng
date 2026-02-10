@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import app from '../index';
+import { app } from '../index';
 
 describe('OCR Route', () => {
   test('POST /api/ocr requires base64Image', async () => {

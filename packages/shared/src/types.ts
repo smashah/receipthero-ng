@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+// Schema for line items on a receipt
+export const LineItemSchema = z.object({
+  name: z.string(),
+  quantity: z.number().optional(),
+  unitPrice: z.number().optional(),
+  totalPrice: z.number(),
+});
+
 // Schema for a processed receipt
 export const ProcessedReceiptSchema = z.object({
   id: z.string(),
@@ -17,6 +25,13 @@ export const ProcessedReceiptSchema = z.object({
   thumbnail: z.string(),
   base64: z.string(),
   mimeType: z.string(),
+  // AI-generated fields for Paperless
+  title: z.string().optional(), // Human-readable document title
+  summary: z.string().optional(), // Text summary of the receipt
+  line_items: z.array(LineItemSchema).optional(), // Individual items on the receipt
+  suggested_tags: z.array(z.string()).optional(), // AI-suggested tags based on content
+  // Currency conversions (populated by ECB service if enabled)
+  conversions: z.record(z.string(), z.number()).optional(), // e.g., { "GBP": 2.5, "USD": 4.0 }
 });
 
 // Type exports
@@ -62,4 +77,68 @@ export interface SpendingCategory {
 
 export interface SpendingBreakdown {
   categories: SpendingCategory[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Processing Events & Logs
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ProcessingStatus = 'detected' | 'processing' | 'completed' | 'failed' | 'retrying' | 'skipped';
+
+export interface ProcessingLog {
+  id: number;
+  documentId: number;
+  status: ProcessingStatus;
+  message?: string;
+  progress: number;
+  attempts: number;
+  fileName?: string;
+  vendor?: string;
+  amount?: number;
+  currency?: string;
+  receiptData?: string; // Full extracted JSON string
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ProcessingEventType =
+  | 'receipt:detected'
+  | 'receipt:processing'
+  | 'receipt:success'
+  | 'receipt:failed'
+  | 'receipt:retry'
+  | 'receipt:skipped';
+
+export interface ProcessingEvent {
+  type: ProcessingEventType;
+  payload: Partial<ProcessingLog> & { documentId: number };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Logging Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogSource = 'worker' | 'api' | 'core' | 'db' | 'config' | 'queue' | 'ws' | 'ocr' | 'paperless';
+
+export interface LogEntry {
+  id?: number;
+  timestamp: string;
+  level: LogLevel;
+  source: LogSource;
+  message: string;
+  context?: string; // JSON string
+  documentId?: number; // Optional: links log to a specific document
+}
+
+export interface LogEvent {
+  type: 'log:entry';
+  payload: LogEntry;
+}
+
+export type AppEventType = ProcessingEventType | 'log:entry';
+
+export interface AppEvent {
+  type: AppEventType;
+  payload: any;
 }

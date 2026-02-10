@@ -1,0 +1,19 @@
+{
+  "name": "@sm-rn/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "PORT=3002 bun run src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sm-rn/core": "workspace:*",
+    "@sm-rn/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "typescript": "catalog:"
+  }
+}

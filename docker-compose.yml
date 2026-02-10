@@ -1,35 +1,15 @@
-version: '3.8'
-
 services:
-  api:
+  receipthero:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: Dockerfile
+    command: pnpm run dev
     environment:
       - DATABASE_PATH=/app/data/receipthero.db
       - CONFIG_PATH=/app/data/config.json
-      - PORT=3001
+      - BUN_DEV_SERVER_PORT=3099  # Move Bun's internal dev server out of the way
     volumes:
-      - app-data:/app/data
-    networks:
-      - receipthero
-    restart: unless-stopped
-
-  webapp:
-    build:
-      context: .
-      dockerfile: apps/webapp/Dockerfile
+      - ./data:/app/data
     ports:
-      - "3000:3000"
-    depends_on:
-      - api
-    networks:
-      - receipthero
+      - "3000:3000"  # Webapp only - API/Worker internal
     restart: unless-stopped
-
-volumes:
-  app-data:
-
-networks:
-  receipthero:
-    driver: bridge

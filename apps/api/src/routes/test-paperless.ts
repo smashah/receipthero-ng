@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { PaperlessClient } from '../services/paperless';
+import { PaperlessClient, loadConfig, createLogger } from '@sm-rn/core';
 
+const logger = createLogger('paperless');
 const testPaperless = new Hono();
 
 const TestPaperlessSchema = z.object({
@@ -11,8 +12,20 @@ const TestPaperlessSchema = z.object({
 });
 
 testPaperless.post('/', zValidator('json', TestPaperlessSchema), async (c) => {
-  const { host, apiKey } = c.req.valid('json');
+  let { host, apiKey } = c.req.valid('json');
+  // Handle masked API key
+  if (apiKey.includes('...')) {
+    try {
+      const config = loadConfig();
+      if (config.paperless?.apiKey) {
+        apiKey = config.paperless.apiKey;
+      }
+    } catch (error) {
+      logger.warn('Failed to load existing config for masked key', error);
+    }
+  }
 
+  logger.debug(`Testing connection to ${host} with key ${apiKey}`);
   try {
     const client = new PaperlessClient({
       host,

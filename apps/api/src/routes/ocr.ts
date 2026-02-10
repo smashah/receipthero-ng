@@ -1,12 +1,11 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { extractReceiptData } from '../services/ocr';
-import { createAIAdapter } from '../services/ai-client';
-import { loadConfig } from '../services/config';
+import { extractReceiptData, createAIAdapter, loadConfig, createLogger } from '@sm-rn/core';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
+const logger = createLogger('ocr');
 const ocr = new Hono();
 
 const OcrRequestSchema = z.object({
@@ -46,7 +45,7 @@ ocr.post('/', zValidator('json', OcrRequestSchema), async (c) => {
 
     return c.json({ receipts });
   } catch (error) {
-    console.error('OCR extraction error:', error);
+    logger.error('OCR extraction failed', error);
     return c.json(
       { error: error instanceof Error ? error.message : String(error) },
       500

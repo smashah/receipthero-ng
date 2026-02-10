@@ -4,28 +4,23 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/index.ts & bun run --watch src/worker.ts",
-    "start": "bun run src/index.ts & bun run src/worker.ts",
+    "dev": "sleep 3 && bun run --watch src/index.ts",
+    "start": "sleep 3 && PORT=3001 bun run src/index.ts",
     "test": "bun test",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@sm-rn/shared": "workspace:*",
-    "hono": "^4.7.11",
     "@hono/zod-validator": "^0.4.2",
+    "@sm-rn/core": "workspace:*",
+    "@sm-rn/shared": "workspace:*",
+    "@upstash/ratelimit": "catalog:",
+    "@upstash/redis": "catalog:",
     "drizzle-orm": "^0.38.4",
-    "@tanstack/ai": "0.4.2",
-    "@tanstack/ai-openai": "0.4.0",
-    "@tanstack/ai-ollama": "0.4.0",
-    "zod": "^4.1.5",
-    "@upstash/ratelimit": "^2.0.6",
-    "@upstash/redis": "^1.35.3"
+    "hono": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
-    "drizzle-kit": "^0.31.5",
-    "typescript": "^5"
+    "typescript": "catalog:"
   }
 }

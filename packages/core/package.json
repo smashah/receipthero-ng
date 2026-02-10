@@ -1,0 +1,29 @@
+{
+  "name": "@sm-rn/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun run src/db/migrate.ts",
+    "db:setup": "bun run db:generate && bun run db:migrate"
+  },
+  "dependencies": {
+    "@sm-rn/shared": "workspace:*",
+    "@tanstack/ai": "0.4.2",
+    "@tanstack/ai-openai": "0.4.0",
+    "@tanstack/ai-ollama": "0.4.0",
+    "drizzle-orm": "^0.38.4",
+    "zod": "catalog:",
+    "@upstash/ratelimit": "catalog:",
+    "@upstash/redis": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "drizzle-kit": "^0.31.5",
+    "typescript": "catalog:"
+  }
+}

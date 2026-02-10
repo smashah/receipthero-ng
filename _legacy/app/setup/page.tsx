@@ -117,14 +117,13 @@ export default function SetupPage() {
       });
       
       const data = await res.json();
-      
       if (res.ok) {
         addToast("Connection successful!", "success");
       } else {
         addToast(`Connection failed: ${data.error}`, "error");
       }
     } catch (error) {
-      addToast("Failed to test connection", "error");
+      addToast("Failed to test conxxxxxnection", "error");
     } finally {
       setTestingPaperless(false);
     }
