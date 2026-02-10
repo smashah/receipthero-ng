@@ -11,7 +11,7 @@ describe('Health Route', () => {
     expect(data).toHaveProperty('timestamp');
     expect(data).toHaveProperty('checks');
     expect(data.checks).toHaveProperty('paperlessConnection');
-    expect(data.checks).toHaveProperty('togetherAiConnection');
+    expect(data.checks).toHaveProperty('aiConnection');
     expect(data.checks).toHaveProperty('config');
   });
 });

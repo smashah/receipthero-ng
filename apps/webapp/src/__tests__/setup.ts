@@ -92,7 +92,7 @@ export const mockHealthData = {
     timestamp: new Date().toISOString(),
     checks: {
       paperlessConnection: 'ok' as const,
-      togetherAiConnection: 'ok' as const,
+      aiConnection: 'ok' as const,
       config: 'ok' as const,
     },
     stats: {
@@ -106,7 +106,7 @@ export const mockHealthData = {
     timestamp: new Date().toISOString(),
     checks: {
       paperlessConnection: 'error' as const,
-      togetherAiConnection: 'error' as const,
+      aiConnection: 'error' as const,
       config: 'error' as const,
     },
     stats: {
@@ -115,7 +115,7 @@ export const mockHealthData = {
       failed: 5,
       inQueue: 5,
     },
-    errors: ['Paperless connection/stats failed', 'Together AI key invalid'],
+    errors: ['Paperless connection/stats failed', 'AI API key is missing or too short'],
   },
 }
 
@@ -125,6 +125,11 @@ export const mockConfigData = {
       host: 'http://localhost:8000',
       apiKey: '***masked***',
     },
+    ai: {
+      provider: 'openai-compat',
+      apiKey: '***masked***',
+      model: 'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8',
+    },
     togetherAi: {
       apiKey: '***masked***',
     },
@@ -133,7 +138,18 @@ export const mockConfigData = {
       receiptTag: 'receipt',
       processedTag: 'ai-processed',
       failedTag: 'ai-failed',
+      skippedTag: 'ai-skipped',
       maxRetries: 3,
+      retryStrategy: 'partial',
+      useDocumentType: false,
+      documentTypeName: 'receipt',
+      updateContent: true,
+      addJsonPayload: true,
+      autoTag: true,
+      currencyConversion: {
+        enabled: false,
+        targetCurrencies: ['GBP', 'USD'],
+      },
     },
     rateLimit: {
       enabled: false,

@@ -44,17 +44,17 @@ export function HealthChecksCard({ health }: HealthChecksCardProps) {
           <div className="flex items-center justify-between border-b pb-4">
             <div className="space-y-1">
               <p className="text-sm font-medium leading-none">
-                Together AI API
+                AI Provider
               </p>
               <p className="text-sm text-muted-foreground">
                 LLM service for OCR processing
               </p>
             </div>
             <Badge
-              variant={getStatusVariant(health?.checks.togetherAiConnection)}
-               className={health?.checks.togetherAiConnection === 'ok' ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-red-100 text-red-800 hover:bg-red-200"}
+              variant={getStatusVariant(health?.checks.aiConnection)}
+               className={health?.checks.aiConnection === 'ok' ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-red-100 text-red-800 hover:bg-red-200"}
             >
-              {health?.checks.togetherAiConnection === 'ok'
+              {health?.checks.aiConnection === 'ok'
                 ? 'Operational'
                 : 'Error'}
             </Badge>

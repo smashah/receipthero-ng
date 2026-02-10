@@ -30,7 +30,7 @@ export interface HealthStatus {
     timestamp: string;
     checks: {
         paperlessConnection: 'ok' | 'error';
-        togetherAiConnection: 'ok' | 'error';
+        aiConnection: 'ok' | 'error';
         config: 'ok' | 'error';
     };
     worker?: {

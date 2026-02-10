@@ -46,12 +46,12 @@ export const testPaperlessConnection = createServerFn({ method: 'POST' })
     }))
 
 /**
- * Test Together AI connection - proxies to POST /api/config/test-together
+ * Test AI provider connection - proxies to POST /api/config/test-ai
  */
-export const testTogetherConnection = createServerFn({ method: 'POST' })
-    .inputValidator((data: { apiKey: string }) => data)
+export const testAiConnection = createServerFn({ method: 'POST' })
+    .inputValidator((data: { provider: string; apiKey?: string; baseURL?: string; model: string }) => data)
     .handler((async ({ data }: any) => {
-        return apiCall<TestConnectionResponse>('/api/config/test-together', {
+        return apiCall<TestConnectionResponse>('/api/config/test-ai', {
             method: 'POST',
             body: JSON.stringify(data),
         });
