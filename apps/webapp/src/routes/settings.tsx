@@ -32,11 +32,11 @@ import {
   useConfig, 
   useSaveConfig, 
   useTestPaperless, 
-  useTestTogether,
+  useTestAi,
   useAvailableCurrencies
 } from '../lib/queries'
 import { FetchError, type ZodIssue } from '../lib/api'
-import { type Config, PartialConfigSchema } from '@sm-rn/shared/schemas'
+import { type Config, type AIProvider, PartialConfigSchema } from '@sm-rn/shared/schemas'
 import {
   Combobox,
   ComboboxChip,
@@ -59,7 +59,7 @@ function SettingsPage() {
   const { data: remoteConfig, isLoading: isLoadingConfig } = useConfig()
   const saveConfigMutation = useSaveConfig()
   const testPaperlessMutation = useTestPaperless()
-  const testTogetherMutation = useTestTogether()
+  const testAiMutation = useTestAi()
   const { data: availableCurrencies = [] } = useAvailableCurrencies()
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -121,14 +121,14 @@ function SettingsPage() {
     })
   }
 
-  const handleTogetherChange = (field: keyof NonNullable<Config['togetherAi']>, value: string) => {
+  const handleAiChange = (field: keyof Config['ai'], value: string) => {
     setLocalConfig(prev => ({
       ...prev,
-      togetherAi: { ...(prev.togetherAi || { apiKey: '' }), [field]: value }
+      ai: { ...prev.ai, [field]: value }
     }))
     setErrors(prev => {
       const next = { ...prev }
-      delete next[`togetherAi.${field}`]
+      delete next[`ai.${field}`]
       return next
     })
   }
@@ -202,23 +202,28 @@ function SettingsPage() {
     }
   }
 
-  const handleTestTogether = async () => {
-    if (!localConfig.togetherAi?.apiKey) {
-      toast.warning('Please fill in Together AI API key')
+  const handleTestAi = async () => {
+    const { provider } = localConfig.ai
+    const needsApiKey = provider === 'openai-compat' || provider === 'openrouter'
+    if (needsApiKey && !localConfig.ai.apiKey) {
+      toast.warning('Please fill in the AI API key')
       return
     }
 
     try {
-      const result = await testTogetherMutation.mutateAsync({
-        apiKey: localConfig.togetherAi?.apiKey || ''
+      const result = await testAiMutation.mutateAsync({
+        provider: localConfig.ai.provider,
+        apiKey: localConfig.ai.apiKey || '',
+        baseURL: localConfig.ai.baseURL || '',
+        model: localConfig.ai.model,
       })
       if (result.success) {
-        toast.success(result.message || 'API key looks good!')
+        toast.success(result.message || 'AI connection successful!')
       } else {
-        toast.error(result.error || 'Validation failed')
+        toast.error(result.error || 'AI connection failed')
       }
     } catch (error) {
-      toast.error('Failed to validate key')
+      toast.error('Failed to test AI connection')
     }
   }
 
@@ -236,6 +241,9 @@ function SettingsPage() {
     // Remove masked values - API will preserve existing
     if (isMasked(payload.paperless?.apiKey)) {
       delete payload.paperless.apiKey
+    }
+    if (isMasked(payload.ai?.apiKey)) {
+      delete payload.ai.apiKey
     }
     if (isMasked(payload.togetherAi?.apiKey)) {
       payload.togetherAi = payload.togetherAi || { apiKey: '' }
@@ -271,6 +279,7 @@ function SettingsPage() {
         .map(p => {
           const s = String(p)
           if (s === 'apiKey') return 'API Key'
+          if (s === 'ai') return 'AI'
           if (s === 'togetherAi') return 'Together AI'
           return s.charAt(0).toUpperCase() + s.slice(1)
         })
@@ -302,6 +311,7 @@ function SettingsPage() {
             .map(p => {
               const s = String(p)
               if (s === 'apiKey') return 'API Key'
+              if (s === 'ai') return 'AI'
               if (s === 'togetherAi') return 'Together AI'
               if (s === 'upstashUrl') return 'Upstash URL'
               if (s === 'upstashToken') return 'Upstash Token'
@@ -418,38 +428,94 @@ function SettingsPage() {
 
             <Separator />
 
-            {/* Together AI Section */}
+            {/* AI Provider Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Brain className="h-4 w-4" /> Together AI
+                  <Brain className="h-4 w-4" /> AI Provider
                 </h3>
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={handleTestTogether}
-                  disabled={testTogetherMutation.isPending}
+                  onClick={handleTestAi}
+                  disabled={testAiMutation.isPending}
                 >
-                  {testTogetherMutation.isPending ? (
+                  {testAiMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
                     <Check className="h-4 w-4 mr-2" />
                   )}
-                  Test Key
+                  Test Connection
                 </Button>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="ai-provider">Provider</Label>
+                <select
+                  id="ai-provider"
+                  value={localConfig.ai.provider}
+                  onChange={(e) => handleAiChange('provider', e.target.value as AIProvider)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="openai-compat">OpenAI-Compatible (Together AI, vLLM, etc.)</option>
+                  <option value="ollama">Ollama (Local)</option>
+                  <option value="openrouter">OpenRouter</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Select your AI provider. OpenAI-compatible works with Together AI, vLLM, and any OpenAI-compatible API.
+                </p>
+              </div>
+
+              {/* API Key — only for cloud providers */}
+              {(localConfig.ai.provider === 'openai-compat' || localConfig.ai.provider === 'openrouter') && (
+                <div className="grid gap-2">
+                  <Label htmlFor="ai-key">API Key</Label>
+                  <Input
+                    id="ai-key"
+                    type="password"
+                    placeholder={localConfig.ai.provider === 'openrouter' ? 'sk-or-...' : 'Paste your API key'}
+                    value={localConfig.ai.apiKey || ''}
+                    onChange={(e) => handleAiChange('apiKey', e.target.value)}
+                    className={errors['ai.apiKey'] ? 'border-destructive' : ''}
+                  />
+                  <ErrorMessage path="ai.apiKey" />
+                </div>
+              )}
+
+              <div className="grid gap-2">
+                <Label htmlFor="ai-base-url">Base URL (optional)</Label>
+                <Input
+                  id="ai-base-url"
+                  placeholder={
+                    localConfig.ai.provider === 'ollama'
+                      ? 'http://localhost:11434'
+                      : localConfig.ai.provider === 'openrouter'
+                        ? 'https://openrouter.ai/api/v1'
+                        : 'https://api.together.xyz/v1'
+                  }
+                  value={localConfig.ai.baseURL || ''}
+                  onChange={(e) => handleAiChange('baseURL', e.target.value)}
+                  className={errors['ai.baseURL'] ? 'border-destructive' : ''}
+                />
+                <ErrorMessage path="ai.baseURL" />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank to use the provider default. Set for self-hosted or custom endpoints.
+                </p>
               </div>
               
               <div className="grid gap-2">
-                <Label htmlFor="together-key">API Key</Label>
+                <Label htmlFor="ai-model">Model</Label>
                 <Input
-                  id="together-key"
-                  type="password"
-                  placeholder="Paste your Together AI API key"
-                  value={localConfig.togetherAi?.apiKey || ''}
-                  onChange={(e) => handleTogetherChange('apiKey', e.target.value)}
-                  className={errors['togetherAi.apiKey'] ? 'border-destructive' : ''}
+                  id="ai-model"
+                  placeholder="meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
+                  value={localConfig.ai.model}
+                  onChange={(e) => handleAiChange('model', e.target.value)}
+                  className={errors['ai.model'] ? 'border-destructive' : ''}
                 />
-                <ErrorMessage path="togetherAi.apiKey" />
+                <ErrorMessage path="ai.model" />
+                <p className="text-xs text-muted-foreground">
+                  The model to use for receipt extraction. Must support vision/image input.
+                </p>
               </div>
             </div>
 

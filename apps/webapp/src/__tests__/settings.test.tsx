@@ -9,11 +9,12 @@ vi.mock('../lib/queries', () => ({
   useConfig: vi.fn(),
   useSaveConfig: vi.fn(),
   useTestPaperless: vi.fn(),
-  useTestTogether: vi.fn(),
+  useTestAi: vi.fn(),
+  useAvailableCurrencies: vi.fn(() => ({ data: [] })),
 }))
 
 // Import after mocking
-import { useConfig, useSaveConfig, useTestPaperless, useTestTogether } from '../lib/queries'
+import { useConfig, useSaveConfig, useTestPaperless, useTestAi } from '../lib/queries'
 import { toast } from 'sonner'
 // Import the Route to get the component
 import { Route } from '../routes/settings'
@@ -21,7 +22,7 @@ import { Route } from '../routes/settings'
 const mockUseConfig = useConfig as ReturnType<typeof vi.fn>
 const mockUseSaveConfig = useSaveConfig as ReturnType<typeof vi.fn>
 const mockUseTestPaperless = useTestPaperless as ReturnType<typeof vi.fn>
-const mockUseTestTogether = useTestTogether as ReturnType<typeof vi.fn>
+const mockUseTestAi = useTestAi as ReturnType<typeof vi.fn>
 
 // Get the component from the Route
 const SettingsPage = Route.options.component!
@@ -39,8 +40,8 @@ function setupDefaultMocks() {
     mutateAsync: vi.fn().mockResolvedValue({ success: true, message: 'Connected!' }),
     isPending: false,
   })
-  mockUseTestTogether.mockReturnValue({
-    mutateAsync: vi.fn().mockResolvedValue({ success: true, message: 'Key valid!' }),
+  mockUseTestAi.mockReturnValue({
+    mutateAsync: vi.fn().mockResolvedValue({ success: true, message: 'AI connection works!' }),
     isPending: false,
   })
 }
@@ -70,8 +71,8 @@ describe('Settings Page', () => {
     // Paperless fields
     expect(screen.getByLabelText(/host url/i)).toBeInTheDocument()
 
-    // Together AI section
-    expect(screen.getByRole('heading', { name: /together ai/i })).toBeInTheDocument()
+    // AI Provider section
+    expect(screen.getByRole('heading', { name: /ai provider/i })).toBeInTheDocument()
 
     // Processing fields
     expect(screen.getByLabelText(/scan interval/i)).toBeInTheDocument()
@@ -86,7 +87,6 @@ describe('Settings Page', () => {
       data: {
         ...mockConfigData.default,
         paperless: { host: '', apiKey: '' },
-        togetherAi: { apiKey: '' },
       },
       isLoading: false,
     })
@@ -98,7 +98,7 @@ describe('Settings Page', () => {
       mutateAsync: vi.fn(),
       isPending: false,
     })
-    mockUseTestTogether.mockReturnValue({
+    mockUseTestAi.mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     })
@@ -127,16 +127,16 @@ describe('Settings Page', () => {
       mutateAsync: mockMutate,
       isPending: false,
     })
-    mockUseTestTogether.mockReturnValue({
+    mockUseTestAi.mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     })
 
     renderSettings()
 
-    // Click Test Connection button
-    const testButton = screen.getByRole('button', { name: /test connection/i })
-    await userEvent.click(testButton)
+    // Click Test Connection button (first one is Paperless)
+    const testButtons = screen.getAllByRole('button', { name: /test connection/i })
+    await userEvent.click(testButtons[0])
 
     // Mutation should be called
     expect(mockMutate).toHaveBeenCalledTimes(1)
@@ -153,7 +153,7 @@ describe('Settings Page', () => {
       data: {
         ...mockConfigData.default,
         paperless: { host: 'http://localhost:8000', apiKey: 'real-key' },
-        togetherAi: { apiKey: 'real-together-key' },
+        ai: { provider: 'openai-compat', apiKey: 'real-ai-key', model: 'test-model' },
       },
       isLoading: false,
     })
@@ -165,7 +165,7 @@ describe('Settings Page', () => {
       mutateAsync: vi.fn(),
       isPending: false,
     })
-    mockUseTestTogether.mockReturnValue({
+    mockUseTestAi.mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     })
@@ -191,7 +191,7 @@ describe('Settings Page', () => {
       data: {
         ...mockConfigData.default,
         paperless: { host: 'http://localhost:8000', apiKey: '***masked***' },
-        togetherAi: { apiKey: '...hidden...' },
+        ai: { provider: 'openai-compat', apiKey: '...hidden...', model: 'test-model' },
       },
       isLoading: false,
     })
@@ -203,7 +203,7 @@ describe('Settings Page', () => {
       mutateAsync: vi.fn(),
       isPending: false,
     })
-    mockUseTestTogether.mockReturnValue({
+    mockUseTestAi.mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     })
@@ -220,6 +220,6 @@ describe('Settings Page', () => {
     // Check that masked values are omitted from payload
     const payload = mockSave.mock.calls[0][0]
     expect(payload.paperless?.apiKey).toBeUndefined()
-    expect(payload.togetherAi?.apiKey).toBeUndefined()
+    expect(payload.ai?.apiKey).toBeUndefined()
   })
 })

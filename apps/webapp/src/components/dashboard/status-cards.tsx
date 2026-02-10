@@ -60,24 +60,26 @@ export function StatusCards({ health, config }: StatusCardsProps) {
         </CardContent>
       </Card>
 
-      {/* Together AI Card */}
+      {/* AI Provider Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            Together AI
+            AI Provider
           </CardTitle>
           <FileText className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-             {health?.checks.togetherAiConnection === 'ok' ? (
+             {health?.checks.aiConnection === 'ok' ? (
                 <span className="text-green-600 flex items-center gap-2"><CheckCircle className="h-5 w-5"/> Active</span>
              ) : (
-                <span className="text-yellow-600 flex items-center gap-2"><AlertTriangle className="h-5 w-5"/> Missing Key</span>
+                <span className="text-yellow-600 flex items-center gap-2"><AlertTriangle className="h-5 w-5"/> Not Configured</span>
              )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            API Key: {config?.togetherAi?.apiKey ? "Configured" : "Not configured"}
+            {config?.ai?.provider
+              ? `${config.ai.provider}${config.ai.model ? ` / ${config.ai.model.split('/').pop()}` : ''}`
+              : 'Not configured'}
           </p>
         </CardContent>
       </Card>

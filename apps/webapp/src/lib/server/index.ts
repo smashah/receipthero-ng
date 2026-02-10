@@ -30,7 +30,7 @@ export {
 } from './processing.functions';
 export {
     testPaperlessConnection,
-    testTogetherConnection,
+    testAiConnection,
     type TestConnectionResponse,
 } from './test.functions';
 export {

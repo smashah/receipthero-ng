@@ -19,7 +19,7 @@ import {
   getAppLogs,
   retryDocument,
   testPaperlessConnection,
-  testTogetherConnection,
+  testAiConnection,
   getCurrencyTotals as getCurrencyTotalsFn,
   getDocumentThumbnail,
   getDocumentImage,
@@ -239,12 +239,12 @@ export function useTestPaperless() {
 }
 
 /**
- * Tests Together AI connection with provided apiKey.
+ * Tests AI provider connection with provided config.
  */
-export function useTestTogether() {
+export function useTestAi() {
   return useMutation({
-    mutationFn: (data: { apiKey: string }): Promise<TestConnectionResponse> =>
-      testTogetherConnection({ data }),
+    mutationFn: (data: { provider: string; apiKey?: string; baseURL?: string; model: string }): Promise<TestConnectionResponse> =>
+      testAiConnection({ data }),
   });
 }
 

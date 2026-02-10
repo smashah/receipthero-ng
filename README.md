@@ -16,7 +16,7 @@ It transforms your chaotic receipt archive into a **searchable, structured datab
 > - Currency converted to your preferred currencies
 > - Paperless-ngx updated with structured metadata
 
-Powered by **Together AI's Llama 4 Maverick** vision model for accurate receipt parsing.
+Powered by **TanStack AI** with support for multiple LLM providers — Together AI, Ollama, OpenRouter, and any OpenAI-compatible endpoint.
 
 ---
 
@@ -31,7 +31,7 @@ Powered by **Together AI's Llama 4 Maverick** vision model for accurate receipt 
 ## ✨ Features
 
 ### 🤖 AI-Powered Receipt Extraction
-- Automatic OCR using Together AI's Llama 4 Maverick vision model
+- Multi-provider AI support via TanStack AI (Together AI, Ollama, OpenRouter, any OpenAI-compatible API)
 - Extracts vendor, amount, currency, date, payment method
 - Parses individual line items with prices
 - Handles receipts in any language
@@ -145,7 +145,11 @@ open http://localhost:3000
 1. Open the webapp at `http://localhost:3000`
 2. Click **Configure** to open settings
 3. Enter your Paperless-ngx host and API key
-4. Enter your Together AI API key
+4. Select your AI provider and enter credentials:
+   - **Together AI** (default): Enter your API key
+   - **Ollama**: Set the base URL to your Ollama instance
+   - **OpenRouter**: Enter your API key
+   - **Custom OpenAI-compatible**: Enter API key and base URL
 5. (Optional) Enable currency conversion and select target currencies
 6. Click **Save** and you're ready!
 
@@ -197,6 +201,63 @@ The dashboard displays aggregated totals for each currency, giving you instant v
 
 ---
 
+## 🤖 AI Provider Configuration
+
+ReceiptHero supports multiple AI providers via [TanStack AI](https://tanstack.com/ai). Configure your preferred provider in the settings page or via `config.json`:
+
+### Together AI (Default)
+
+```json
+{
+  "ai": {
+    "provider": "openai-compat",
+    "apiKey": "YOUR_TOGETHER_API_KEY",
+    "model": "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
+  }
+}
+```
+
+### Ollama (Local/Self-Hosted)
+
+```json
+{
+  "ai": {
+    "provider": "ollama",
+    "baseURL": "http://localhost:11434",
+    "model": "llava"
+  }
+}
+```
+
+### OpenRouter
+
+```json
+{
+  "ai": {
+    "provider": "openrouter",
+    "apiKey": "YOUR_OPENROUTER_KEY",
+    "model": "meta-llama/llama-4-maverick"
+  }
+}
+```
+
+### Any OpenAI-Compatible API
+
+```json
+{
+  "ai": {
+    "provider": "openai-compat",
+    "apiKey": "YOUR_API_KEY",
+    "baseURL": "https://your-api-host/v1",
+    "model": "your-model-name"
+  }
+}
+```
+
+> **Note**: The model must support vision/image input for receipt extraction to work.
+
+---
+
 ## 📁 Document Type Detection
 
 By default, ReceiptHero looks for documents tagged with `receipt`. If you already have document types set up in Paperless-ngx, you can detect receipts by `document_type` instead:
@@ -220,6 +281,7 @@ When enabled:
 ## 🧭 Roadmap
 
 - [x] AI-powered receipt extraction
+- [x] Multi-provider AI support (Together AI, Ollama, OpenRouter)
 - [x] Multi-currency conversion
 - [x] Real-time dashboard with live logs
 - [x] Worker pause/resume controls
@@ -266,12 +328,12 @@ This is a Turborepo monorepo:
 | `@sm-rn/api` | Hono API backend (Bun runtime) |
 | `@sm-rn/webapp` | TanStack Start frontend |
 | `@sm-rn/worker` | Background processing worker |
-| `@sm-rn/core` | Core services (Paperless, OCR, currency, logging) |
+| `@sm-rn/core` | Core services (Paperless, OCR, currency, AI adapter, logging) |
 | `@sm-rn/shared` | Shared types and schemas |
 
 ### Tech Stack
 
-**Backend:** Hono, Bun, Drizzle ORM, SQLite, Together AI  
+**Backend:** Hono, Bun, Drizzle ORM, SQLite, TanStack AI  
 **Frontend:** React 19, TanStack Start/Router, TypeScript  
 **Infrastructure:** Turborepo, pnpm, Docker
 
@@ -288,7 +350,7 @@ This is a Turborepo monorepo:
 - `POST /api/config` - Save configuration
 - `GET /api/config/currencies` - Get available currencies
 - `POST /api/config/test-paperless` - Test Paperless connection
-- `POST /api/config/test-together` - Test Together AI key
+- `POST /api/config/test-ai` - Test AI provider connection
 
 ### Processing
 - `POST /api/ocr` - Extract receipt data from image
