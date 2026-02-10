@@ -2,13 +2,12 @@ import { PaperlessClient } from './paperless';
 import { extractReceiptData } from './ocr';
 import { loadConfig } from './config';
 import { RetryQueue } from './retry-queue';
-import { createTogetherClient } from './together-client';
-import type { Together } from 'together-ai';
+import { createAIAdapter, type AIAdapter } from './ai-client';
 
 export async function processPaperlessDocument(
   client: PaperlessClient,
   documentId: number,
-  togetherClient: Together,
+  adapter: AIAdapter,
   retryQueue?: RetryQueue,
   failedTag?: string
 ) {
@@ -36,8 +35,8 @@ export async function processPaperlessDocument(
     }
     const base64 = fileBuffer.toString('base64');
     
-    // 3. Extract data using Together AI (ReceiptHero logic)
-    const receipts = await extractReceiptData(base64, togetherClient);
+    // 3. Extract data using AI adapter (ReceiptHero logic)
+    const receipts = await extractReceiptData(base64, adapter);
     
     if (receipts.length === 0) {
       console.log(`No receipt data found for document ${documentId}`);
@@ -153,8 +152,8 @@ export async function runAutomation() {
     processedTagName: config.processing.processedTag,
   });
 
-  // Create Together AI client with optional Helicone
-  const togetherClient = createTogetherClient(config);
+  // Create AI adapter with optional Helicone
+  const adapter = createAIAdapter(config);
 
   // Initialize retry queue
   const retryQueue = new RetryQueue(config.processing.maxRetries);
@@ -165,7 +164,7 @@ export async function runAutomation() {
   console.log(`Found ${unprocessed.length} unprocessed documents with tag "${config.processing.receiptTag}"`);
   
   for (const doc of unprocessed) {
-    await processPaperlessDocument(client, doc.id, togetherClient, retryQueue, config.processing.failedTag);
+    await processPaperlessDocument(client, doc.id, adapter, retryQueue, config.processing.failedTag);
   }
 
   // 2. Process documents from retry queue that are ready
@@ -174,7 +173,7 @@ export async function runAutomation() {
     console.log(`Processing ${readyForRetry.length} documents from retry queue`);
     
     for (const item of readyForRetry) {
-      await processPaperlessDocument(client, item.documentId, togetherClient, retryQueue, config.processing.failedTag);
+      await processPaperlessDocument(client, item.documentId, adapter, retryQueue, config.processing.failedTag);
     }
   }
 }

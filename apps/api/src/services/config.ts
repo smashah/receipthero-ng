@@ -37,9 +37,15 @@ export function loadConfig(): Config {
       host: getConfigValue(fileConfig, ['paperless', 'host'], process.env.PAPERLESS_HOST),
       apiKey: getConfigValue(fileConfig, ['paperless', 'apiKey'], process.env.PAPERLESS_API_KEY),
     },
-    togetherAi: {
-      apiKey: getConfigValue(fileConfig, ['togetherAi', 'apiKey'], process.env.TOGETHER_API_KEY),
+    ai: {
+      provider: getConfigValue(fileConfig, ['ai', 'provider'], process.env.AI_PROVIDER),
+      apiKey: getConfigValue(fileConfig, ['ai', 'apiKey'], process.env.AI_API_KEY),
+      baseURL: getConfigValue(fileConfig, ['ai', 'baseURL'], process.env.AI_BASE_URL),
+      model: getConfigValue(fileConfig, ['ai', 'model'], process.env.AI_MODEL),
     },
+    togetherAi: getConfigValue(fileConfig, ['togetherAi', 'apiKey'], process.env.TOGETHER_API_KEY)
+      ? { apiKey: getConfigValue(fileConfig, ['togetherAi', 'apiKey'], process.env.TOGETHER_API_KEY)! }
+      : undefined,
     processing: {
       scanInterval: getConfigValueNumber(
         fileConfig,
@@ -82,6 +88,14 @@ export function loadConfig(): Config {
       .map((e) => `  - ${e.path.join('.')}: ${e.message}`)
       .join('\n');
     throw new Error(`Configuration validation failed:\n${errors}`);
+  }
+
+  // Backward compatibility: migrate togetherAi.apiKey → ai.apiKey
+  if (!result.data.ai.apiKey && result.data.togetherAi?.apiKey) {
+    result.data.ai.apiKey = result.data.togetherAi.apiKey;
+    if (!result.data.ai.baseURL) {
+      result.data.ai.baseURL = 'https://api.together.xyz/v1';
+    }
   }
 
   return result.data;

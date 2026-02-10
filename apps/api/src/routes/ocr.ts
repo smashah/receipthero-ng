@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { extractReceiptData } from '../services/ocr';
-import { createTogetherClient } from '../services/together-client';
+import { createAIAdapter } from '../services/ai-client';
 import { loadConfig } from '../services/config';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
@@ -38,11 +38,11 @@ ocr.post('/', zValidator('json', OcrRequestSchema), async (c) => {
       }
     }
 
-    // Create Together AI client
-    const togetherClient = createTogetherClient(config);
+    // Create AI adapter
+    const adapter = createAIAdapter(config);
 
     // Extract receipt data
-    const receipts = await extractReceiptData(base64Image, togetherClient);
+    const receipts = await extractReceiptData(base64Image, adapter);
 
     return c.json({ receipts });
   } catch (error) {

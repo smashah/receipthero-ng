@@ -3,7 +3,7 @@ import { cors } from 'hono/cors'
 import health from './routes/health'
 import config from './routes/config'
 import testPaperless from './routes/test-paperless'
-import testTogether from './routes/test-together'
+import testAi from './routes/test-ai'
 import ocr from './routes/ocr'
 
 const app = new Hono()
@@ -18,7 +18,7 @@ app.get('/', (c) => c.text('ReceiptHero API'))
 app.route('/api/health', health)
 app.route('/api/config', config)
 app.route('/api/config/test-paperless', testPaperless)
-app.route('/api/config/test-together', testTogether)
+app.route('/api/config/test-ai', testAi)
 app.route('/api/ocr', ocr)
 
 // Export app and type for RPC

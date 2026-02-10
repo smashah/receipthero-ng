@@ -15,8 +15,8 @@ This is a Turborepo monorepo with:
 - Hono (API framework)
 - Bun (JavaScript runtime)
 - Drizzle ORM + SQLite (database)
-- Together AI (LLM-powered OCR)
-- Llama 4 Maverick 17B (receipt extraction)
+- TanStack AI (multi-provider LLM OCR)
+- Supports: Together AI, Ollama, OpenRouter, any OpenAI-compatible API
 
 **Frontend:**
 - React 19
@@ -66,6 +66,14 @@ Configuration can be provided via:
 # Required
 PAPERLESS_HOST=http://paperless:8000
 PAPERLESS_API_KEY=your-paperless-api-key
+
+# AI Provider (new — replaces TOGETHER_API_KEY)
+AI_PROVIDER=openai-compat          # openai-compat | ollama | openrouter
+AI_API_KEY=your-api-key            # Required for openai-compat and openrouter
+AI_BASE_URL=https://api.together.xyz/v1  # Optional, provider-specific default
+AI_MODEL=meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8
+
+# Backward compatible — still works, auto-migrates to AI_* settings
 TOGETHER_API_KEY=your-together-ai-api-key
 
 # Optional
@@ -85,20 +93,29 @@ HELICONE_ENABLED=false
 HELICONE_API_KEY=your-helicone-api-key
 ```
 
+### Supported AI Providers
+
+| Provider | `AI_PROVIDER` | `AI_BASE_URL` (default) | API Key Required |
+|----------|---------------|--------------------------|------------------|
+| Together AI | `openai-compat` | `https://api.together.xyz/v1` | Yes |
+| Ollama (local) | `ollama` | `http://localhost:11434` | No |
+| OpenRouter | `openrouter` | (OpenRouter default) | Yes |
+| vLLM / LiteLLM / LM Studio | `openai-compat` | Your endpoint URL | Depends on setup |
+
 ## API Endpoints
 
 - `GET /api/health` - Health check
 - `GET /api/config` - Get configuration (masked keys)
 - `POST /api/config` - Save configuration
 - `POST /api/config/test-paperless` - Test Paperless connection
-- `POST /api/config/test-together` - Test Together AI key
+- `POST /api/config/test-ai` - Test AI provider connection
 - `POST /api/ocr` - Extract receipt data from image
 
 ## How It Works
 
 1. Worker polls Paperless-NGX for documents tagged with `receipt`
 2. Downloads document (prefers thumbnail for OCR)
-3. Sends to Together AI's Llama model for structured extraction
+3. Sends to configured AI provider (via TanStack AI) for structured extraction
 4. Updates Paperless document with:
    - Title: `{vendor} - {amount} {currency}`
    - Created date from receipt

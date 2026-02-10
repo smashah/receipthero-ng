@@ -9,7 +9,7 @@ interface HealthStatus {
   timestamp: string;
   checks: {
     paperlessConnection: 'ok' | 'error';
-    togetherAiConnection: 'ok' | 'error';
+    aiConnection: 'ok' | 'error';
     config: 'ok' | 'error';
   };
   errors?: string[];
@@ -21,7 +21,7 @@ health.get('/', async (c) => {
     timestamp: new Date().toISOString(),
     checks: {
       paperlessConnection: 'ok',
-      togetherAiConnection: 'ok',
+      aiConnection: 'ok',
       config: 'ok',
     },
   };
@@ -37,15 +37,16 @@ health.get('/', async (c) => {
     errors.push(`Config validation failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  // 2. Together AI Connection Check
+  // 2. AI Connection Check — verify API key is present for cloud providers
   if (config) {
-    if (!config.togetherAi.apiKey || config.togetherAi.apiKey.length < 10) {
-      status.checks.togetherAiConnection = 'error';
+    const needsApiKey = config.ai.provider === 'openai-compat' || config.ai.provider === 'openrouter';
+    if (needsApiKey && (!config.ai.apiKey || config.ai.apiKey.length < 10)) {
+      status.checks.aiConnection = 'error';
       status.status = 'unhealthy';
-      errors.push('Together AI API key is missing or too short');
+      errors.push('AI API key is missing or too short');
     }
   } else {
-    status.checks.togetherAiConnection = 'error';
+    status.checks.aiConnection = 'error';
     status.status = 'unhealthy';
   }
 

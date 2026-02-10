@@ -25,9 +25,13 @@ config.get('/', (c) => {
         ...cfg.paperless,
         apiKey: maskApiKey(cfg.paperless.apiKey),
       },
-      togetherAi: {
-        apiKey: maskApiKey(cfg.togetherAi.apiKey),
+      ai: {
+        ...cfg.ai,
+        apiKey: maskApiKey(cfg.ai.apiKey),
       },
+      togetherAi: cfg.togetherAi ? {
+        apiKey: maskApiKey(cfg.togetherAi.apiKey),
+      } : undefined,
       rateLimit: cfg.rateLimit ? {
         ...cfg.rateLimit,
         upstashToken: maskApiKey(cfg.rateLimit.upstashToken),

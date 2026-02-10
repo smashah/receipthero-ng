@@ -1,23 +1,13 @@
 import { z } from 'zod';
+import { chat } from '@tanstack/ai';
 import { ProcessedReceiptSchema } from '@sm-rn/shared/types';
-import type { Together } from 'together-ai';
+import type { AIAdapter } from './ai-client';
 
 export const ReceiptExtractionSchema = z.object({
   receipts: z.array(ProcessedReceiptSchema),
 });
 
-export async function extractReceiptData(
-  base64Image: string,
-  togetherClient: Together
-) {
-  const jsonSchema = z.toJSONSchema(ReceiptExtractionSchema);
-
-  const response = await togetherClient.chat.completions.create({
-    model: 'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8',
-    messages: [
-      {
-        role: 'system',
-        content: `You are an expert at extracting receipt data. Extract all receipts from the image as a JSON object matching the schema.
+const SYSTEM_PROMPT = `You are an expert at extracting receipt data. Extract all receipts from the image as a JSON object matching the schema.
 
 CRITICAL FORMATTING REQUIREMENTS:
 - Date MUST be in YYYY-MM-DD format (e.g., "2024-01-15", not "01/15/2024" or "Jan 15, 2024")
@@ -27,7 +17,7 @@ CRITICAL FORMATTING REQUIREMENTS:
 CURRENCY EXTRACTION:
 - ALWAYS include a currency field in the response
 - Extract the currency code (e.g., "USD", "EUR", "AED", "GBP", "CAD", etc.) from currency symbols or explicit mentions
-- Common currency symbols: $ = USD, € = EUR, £ = GBP, AED = AED (or د.إ), etc.
+- Common currency symbols: $ = USD, \u20ac = EUR, \u00a3 = GBP, AED = AED, etc.
 - If no currency symbol is visible on the receipt, use "USD" as the default
 - Currency field should be the 3-letter currency code (ISO 4217 format)
 
@@ -48,36 +38,33 @@ CATEGORIZATION RULES:
 
 PAYMENT METHODS: Common values include "cash", "credit", "debit", "check", "gift card", "digital wallet"
 
-Extract all visible receipt data accurately. If information is not visible, use reasonable defaults or omit if not applicable. Respond only with valid JSON.`,
-      },
+Extract all visible receipt data accurately. If information is not visible, use reasonable defaults or omit if not applicable. Respond only with valid JSON.`;
+
+export async function extractReceiptData(
+  base64Image: string,
+  adapter: AIAdapter
+) {
+  const result = await chat({
+    adapter,
+    systemPrompts: [SYSTEM_PROMPT],
+    messages: [
       {
-        role: 'user',
+        role: 'user' as const,
         content: [
           {
-            type: 'text',
-            text: 'Extract receipt data from this image following the formatting and categorization rules.',
+            type: 'text' as const,
+            content: 'Extract receipt data from this image following the formatting and categorization rules.',
           },
           {
-            type: 'image_url',
-            image_url: { url: `data:image/jpeg;base64,${base64Image}` },
+            type: 'image' as const,
+            source: { type: 'data' as const, value: base64Image, mimeType: 'image/jpeg' as const },
           },
         ],
       },
     ],
-    response_format: { type: 'json_object', schema: jsonSchema },
+    outputSchema: ReceiptExtractionSchema,
   });
 
-  const content = response?.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new Error('OCR extraction failed: empty response');
-  }
-
-  const parsedJson = JSON.parse(content);
-  const validated = ReceiptExtractionSchema.safeParse(parsedJson);
-  
-  if (!validated.success) {
-    throw new Error(`Validation failed: ${validated.error.message}`);
-  }
-
-  return validated.data.receipts;
+  // TanStack AI returns typed, validated data — no manual JSON.parse needed
+  return result.receipts;
 }
