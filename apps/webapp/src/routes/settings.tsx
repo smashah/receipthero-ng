@@ -66,6 +66,12 @@ function SettingsPage() {
 
   const [localConfig, setLocalConfig] = useState<Config>({
     paperless: { host: '', apiKey: '' },
+    ai: {
+      provider: 'openai-compat',
+      apiKey: '',
+      baseURL: '',
+      model: 'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8'
+    },
     togetherAi: { apiKey: '' },
     processing: {
       scanInterval: 300000,
@@ -115,10 +121,10 @@ function SettingsPage() {
     })
   }
 
-  const handleTogetherChange = (field: keyof Config['togetherAi'], value: string) => {
+  const handleTogetherChange = (field: keyof NonNullable<Config['togetherAi']>, value: string) => {
     setLocalConfig(prev => ({
       ...prev,
-      togetherAi: { ...prev.togetherAi, [field]: value }
+      togetherAi: { ...(prev.togetherAi || { apiKey: '' }), [field]: value }
     }))
     setErrors(prev => {
       const next = { ...prev }
@@ -197,14 +203,14 @@ function SettingsPage() {
   }
 
   const handleTestTogether = async () => {
-    if (!localConfig.togetherAi.apiKey) {
+    if (!localConfig.togetherAi?.apiKey) {
       toast.warning('Please fill in Together AI API key')
       return
     }
 
     try {
       const result = await testTogetherMutation.mutateAsync({
-        apiKey: localConfig.togetherAi.apiKey
+        apiKey: localConfig.togetherAi?.apiKey || ''
       })
       if (result.success) {
         toast.success(result.message || 'API key looks good!')
@@ -232,6 +238,7 @@ function SettingsPage() {
       delete payload.paperless.apiKey
     }
     if (isMasked(payload.togetherAi?.apiKey)) {
+      payload.togetherAi = payload.togetherAi || { apiKey: '' }
       delete payload.togetherAi.apiKey
     }
     if (payload.rateLimit && isMasked(payload.rateLimit.upstashToken)) {
@@ -438,7 +445,7 @@ function SettingsPage() {
                   id="together-key"
                   type="password"
                   placeholder="Paste your Together AI API key"
-                  value={localConfig.togetherAi.apiKey}
+                  value={localConfig.togetherAi?.apiKey || ''}
                   onChange={(e) => handleTogetherChange('apiKey', e.target.value)}
                   className={errors['togetherAi.apiKey'] ? 'border-destructive' : ''}
                 />

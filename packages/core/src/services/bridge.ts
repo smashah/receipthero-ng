@@ -2,11 +2,10 @@ import { PaperlessClient } from './paperless';
 import { extractReceiptData } from './ocr';
 import { loadConfig } from './config';
 import { RetryQueue } from './retry-queue';
-import { createTogetherClient } from './together-client';
+import { createAIAdapter, type AIAdapter } from './ai-client';
 import { reporter } from './reporter';
 import { createLogger } from './logger';
 import { skippedDocuments } from './skipped-documents';
-import type { Together } from 'together-ai';
 
 import { db, schema } from '../db';
 import { eq, desc } from 'drizzle-orm';
@@ -74,7 +73,7 @@ ${itemsList}
 export async function processPaperlessDocument(
   client: PaperlessClient,
   documentId: number,
-  togetherClient: Together,
+  adapter: AIAdapter,
   retryQueue?: RetryQueue,
   failedTag?: string,
   forceRetryStrategy?: 'full' | 'partial'
@@ -208,7 +207,7 @@ export async function processPaperlessDocument(
 
       let receipts: any[];
       try {
-        receipts = await extractReceiptData(base64, togetherClient, { existingTags: existingTagNames });
+        receipts = await extractReceiptData(base64, adapter, { existingTags: existingTagNames });
         docLogger.debug(` ✓ AI extraction complete, found ${receipts.length} receipt(s)`);
       } catch (ocrError: any) {
         docLogger.error(` ✗ AI extraction failed`, {
@@ -603,9 +602,9 @@ export async function runAutomation(): Promise<{
     processedTagName: config.processing.processedTag,
   });
 
-  // Create Together AI client with optional Helicone
-  logger.debug('Initializing Together AI client...');
-  const togetherClient = createTogetherClient(config);
+  // Create AI adapter with optional Helicone
+  logger.debug('Initializing AI adapter...');
+  const adapter = createAIAdapter(config);
 
   // Initialize retry queue
   const retryQueue = new RetryQueue(config.processing.maxRetries);
@@ -640,7 +639,7 @@ export async function runAutomation(): Promise<{
   for (const doc of unprocessed) {
     logger.debug(`Queuing document ${doc.id}: "${doc.title}"`);
     await reporter.report('receipt:detected', { documentId: doc.id, fileName: doc.title, status: 'detected', progress: 0 });
-    await processPaperlessDocument(client, doc.id, togetherClient, retryQueue, config.processing.failedTag);
+    await processPaperlessDocument(client, doc.id, adapter, retryQueue, config.processing.failedTag);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -652,7 +651,7 @@ export async function runAutomation(): Promise<{
 
     for (const item of readyForRetry) {
       logger.debug(`Processing retry for document ${item.documentId} (attempt ${item.attempts + 1})`);
-      await processPaperlessDocument(client, item.documentId, togetherClient, retryQueue, config.processing.failedTag);
+      await processPaperlessDocument(client, item.documentId, adapter, retryQueue, config.processing.failedTag);
     }
   }
 

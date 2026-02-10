@@ -77,7 +77,7 @@ export function StatusCards({ health, config }: StatusCardsProps) {
              )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            API Key: {config?.togetherAi.apiKey ? "Configured" : "Not configured"}
+            API Key: {config?.togetherAi?.apiKey ? "Configured" : "Not configured"}
           </p>
         </CardContent>
       </Card>

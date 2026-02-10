@@ -233,7 +233,7 @@ export function useSaveConfig() {
  */
 export function useTestPaperless() {
   return useMutation({
-    mutationFn: (data: { host: string; apiKey: string }) =>
+    mutationFn: (data: { host: string; apiKey: string }): Promise<TestConnectionResponse> =>
       testPaperlessConnection({ data }),
   });
 }
@@ -243,7 +243,7 @@ export function useTestPaperless() {
  */
 export function useTestTogether() {
   return useMutation({
-    mutationFn: (data: { apiKey: string }) =>
+    mutationFn: (data: { apiKey: string }): Promise<TestConnectionResponse> =>
       testTogetherConnection({ data }),
   });
 }

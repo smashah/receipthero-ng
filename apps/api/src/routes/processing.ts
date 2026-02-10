@@ -5,7 +5,7 @@ import {
   loadConfig, 
   PaperlessClient, 
   processPaperlessDocument, 
-  createTogetherClient,
+  createAIAdapter,
   RetryQueue,
   createLogger
 } from '@sm-rn/core';
@@ -29,14 +29,14 @@ processing.post('/:id/retry', zValidator('json', RetrySchema), async (c) => {
       apiKey: config.paperless.apiKey,
       processedTagName: config.processing.processedTag,
     });
-    const togetherClient = createTogetherClient(config);
+    const adapter = createAIAdapter(config);
     const retryQueue = new RetryQueue(config.processing.maxRetries);
 
     // Run processing in background
     processPaperlessDocument(
       client, 
       id, 
-      togetherClient, 
+      adapter, 
       retryQueue, 
       config.processing.failedTag,
       strategy

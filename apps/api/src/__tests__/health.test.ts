@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
-import app from '../index';
+import { app } from '../index';
 
 describe('Health Route', () => {
   test('GET /api/health returns health status', async () => {

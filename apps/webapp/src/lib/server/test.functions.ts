@@ -37,6 +37,7 @@ export interface TestConnectionResponse {
  * Test Paperless connection - proxies to POST /api/config/test-paperless
  */
 export const testPaperlessConnection = createServerFn({ method: 'POST' })
+    .inputValidator((data: { host: string; apiKey: string }) => data)
     .handler((async ({ data }: any) => {
         return apiCall<TestConnectionResponse>('/api/config/test-paperless', {
             method: 'POST',
@@ -48,6 +49,7 @@ export const testPaperlessConnection = createServerFn({ method: 'POST' })
  * Test Together AI connection - proxies to POST /api/config/test-together
  */
 export const testTogetherConnection = createServerFn({ method: 'POST' })
+    .inputValidator((data: { apiKey: string }) => data)
     .handler((async ({ data }: any) => {
         return apiCall<TestConnectionResponse>('/api/config/test-together', {
             method: 'POST',

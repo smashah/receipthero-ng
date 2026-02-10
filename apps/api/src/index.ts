@@ -3,7 +3,7 @@ import { cors } from 'hono/cors'
 import health from './routes/health'
 import config from './routes/config'
 import testPaperless from './routes/test-paperless'
-import testTogether from './routes/test-together'
+import testAi from './routes/test-ai'
 import ocr from './routes/ocr'
 import events from './routes/events'
 import documents from './routes/documents'
@@ -32,7 +32,7 @@ app.route('/ws', ws)
 app.use(honoLogger())
 app.route('/api/config', config)
 app.route('/api/config/test-paperless', testPaperless)
-app.route('/api/config/test-together', testTogether)
+app.route('/api/config/test-ai', testAi)
 app.route('/api/ocr', ocr)
 app.route('/api/documents', documents)
 app.route('/api/processing', processing)

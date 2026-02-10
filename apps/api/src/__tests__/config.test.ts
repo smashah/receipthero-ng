@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import app from '../index';
+import { app } from '../index';
 
 describe('Config Route', () => {
   test('GET /api/config returns config with masked keys', async () => {

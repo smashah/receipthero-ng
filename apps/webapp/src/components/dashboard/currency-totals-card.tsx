@@ -63,7 +63,6 @@ export function CurrencyTotalsCard({ currencyTotals, targetCurrencies }: Currenc
                 <SlidingNumber 
                   number={Math.round(item.total)} 
                   thousandSeparator=","
-                  transition={{ stiffness: 150, damping: 25, mass: 0.5 }}
                 />
               </span>
               <p className="text-xs text-muted-foreground uppercase font-medium">
