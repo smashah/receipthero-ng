@@ -12,3 +12,4 @@ export * from './services/reporter';
 export * from './services/logger';
 export * from './services/worker-state';
 export * from './services/skipped-documents';
+export * from './services/webhook-queue';

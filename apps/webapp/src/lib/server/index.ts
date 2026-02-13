@@ -43,3 +43,8 @@ export {
     getDocumentImage,
     type DocumentImageResponse,
 } from './documents.functions';
+export {
+    getWebhookStatus,
+    type WebhookStatusResponse,
+    type WebhookQueueStats,
+} from './webhooks.functions';

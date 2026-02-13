@@ -1,7 +1,11 @@
-import { runAutomation, loadConfig, createLogger, workerState } from '@sm-rn/core';
+import { runAutomation, loadConfig, createLogger, workerState, webhookQueueService, processDocumentsByIds } from '@sm-rn/core';
 
 const logger = createLogger('worker');
 let isShuttingDown = false;
+
+// Track periodic cleanup (run once per hour)
+let lastWebhookCleanup = Date.now();
+const WEBHOOK_CLEANUP_INTERVAL = 3600000; // 1 hour
 
 async function workerLoop() {
   logger.lifecycle('🚀', 'Starting ReceiptHero Paperless-NGX Integration Worker...');
@@ -26,6 +30,54 @@ async function workerLoop() {
         continue;
       }
 
+      // ── Webhook Queue Processing (priority) ──────────────────────────
+      // Process webhook-queued documents before checking scheduled scans.
+      // This ensures near-instant processing when Paperless sends a webhook.
+      let webhookProcessed = false;
+      const hasWebhookItems = await webhookQueueService.hasPending();
+      if (hasWebhookItems) {
+        const webhookLock = await workerState.acquireLock();
+        if (webhookLock) {
+          try {
+            const pendingIds = await webhookQueueService.consumePending();
+            if (pendingIds.length > 0) {
+              logger.info(`📡 Processing ${pendingIds.length} webhook-queued document(s)...`);
+              try {
+                await processDocumentsByIds(pendingIds);
+                // Mark all as completed (processing outcome tracked in processing_logs)
+                for (const id of pendingIds) {
+                  await webhookQueueService.markCompleted(id);
+                }
+                webhookProcessed = true;
+              } catch (error: any) {
+                logger.error('Webhook queue processing failed', error.message || error);
+                for (const id of pendingIds) {
+                  await webhookQueueService.markFailed(id);
+                }
+              }
+            }
+          } finally {
+            await workerState.releaseLock();
+          }
+        } else {
+          logger.debug('Webhook items pending but lock not available, will retry next cycle');
+        }
+      }
+
+      // ── Periodic Webhook Queue Cleanup ────────────────────────────────
+      if (Date.now() - lastWebhookCleanup > WEBHOOK_CLEANUP_INTERVAL) {
+        try {
+          const cleaned = await webhookQueueService.cleanup();
+          if (cleaned > 0) {
+            logger.info(`Cleaned up ${cleaned} old webhook queue entries`);
+          }
+        } catch {
+          // Non-fatal: ignore cleanup errors
+        }
+        lastWebhookCleanup = Date.now();
+      }
+
+      // ── Scheduled / Manual Scan ──────────────────────────────────────
       // Check if a scan was manually triggered
       const wasTriggered = await workerState.consumeScanRequest();
 
