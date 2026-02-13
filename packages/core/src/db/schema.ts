@@ -70,3 +70,17 @@ export const skippedDocumentsSchema = sqliteTable('skipped_documents', {
 
 export type SkippedDocumentEntry = typeof skippedDocumentsSchema.$inferSelect;
 export type NewSkippedDocumentEntry = typeof skippedDocumentsSchema.$inferInsert;
+
+// Webhook queue for storing document IDs received from Paperless-ngx webhooks
+export const webhookQueue = sqliteTable('webhook_queue', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  documentId: integer('documentId').notNull(),
+  source: text('source').notNull().default('paperless'), // Future: support multiple webhook sources
+  payload: text('payload'), // Raw JSON payload for debugging
+  status: text('status').notNull().default('pending'), // 'pending' | 'processing' | 'completed' | 'failed'
+  receivedAt: text('receivedAt').notNull(), // ISO date string
+  processedAt: text('processedAt'), // ISO date string, null until processed
+});
+
+export type WebhookQueueEntry = typeof webhookQueue.$inferSelect;
+export type NewWebhookQueueEntry = typeof webhookQueue.$inferInsert;

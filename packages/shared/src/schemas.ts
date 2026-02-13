@@ -50,6 +50,10 @@ export const ConfigSchema = z.object({
     heliconeEnabled: z.boolean().default(false),
     heliconeApiKey: z.string().optional(),
   }).optional().default({ heliconeEnabled: false }),
+  webhooks: z.object({
+    enabled: z.boolean().default(false),
+    secret: z.string().optional(), // Bearer token for validating Paperless-ngx webhook requests
+  }).optional().default({ enabled: false }),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -93,6 +97,10 @@ export const PartialConfigSchema = z.object({
   observability: z.object({
     heliconeEnabled: z.boolean().optional(),
     heliconeApiKey: z.string().optional(),
+  }).optional(),
+  webhooks: z.object({
+    enabled: z.boolean().optional(),
+    secret: z.string().optional(),
   }).optional(),
 });
 
