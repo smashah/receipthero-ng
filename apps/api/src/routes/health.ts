@@ -7,6 +7,7 @@ const health = new Hono();
 interface HealthStatus {
   status: 'healthy' | 'unhealthy';
   timestamp: string;
+  configComplete: boolean;
   checks: {
     paperlessConnection: 'ok' | 'error';
     aiConnection: 'ok' | 'error';
@@ -27,10 +28,26 @@ interface HealthStatus {
   errors?: string[];
 }
 
+/**
+ * Checks whether the Paperless host/apiKey are actually configured
+ * (not empty, not placeholder values from the default template).
+ */
+function isPaperlessConfigured(config: { paperless: { host: string; apiKey: string } }): boolean {
+  const { host, apiKey } = config.paperless;
+  if (!host || !apiKey) return false;
+  // Detect placeholder values from the default template
+  if (host === 'http://localhost:8000' && apiKey === 'YOUR_PAPERLESS_API_KEY') return false;
+  if (apiKey === 'YOUR_PAPERLESS_API_KEY') return false;
+  // Must be a valid URL
+  try { new URL(host); } catch { return false; }
+  return true;
+}
+
 health.get('/', async (c) => {
   const status: HealthStatus = {
     status: 'healthy',
     timestamp: new Date().toISOString(),
+    configComplete: false,
     checks: {
       paperlessConnection: 'ok',
       aiConnection: 'ok',
@@ -50,6 +67,8 @@ health.get('/', async (c) => {
   let config;
   try {
     config = loadConfig();
+    // Check if essential config (Paperless) is actually filled in
+    status.configComplete = isPaperlessConfigured(config);
   } catch (error) {
     status.checks.config = 'error';
     status.status = 'unhealthy';
@@ -70,7 +89,7 @@ health.get('/', async (c) => {
   }
 
   // 3. Paperless Connection & Stats Check
-  if (config) {
+  if (config && isPaperlessConfigured(config)) {
     try {
       const client = new PaperlessClient({
         host: config.paperless.host,
@@ -132,6 +151,9 @@ health.get('/', async (c) => {
   } else {
     status.checks.paperlessConnection = 'error';
     status.status = 'unhealthy';
+    if (config) {
+      errors.push('Paperless-ngx is not configured. Go to Settings to set it up.');
+    }
   }
 
   if (errors.length > 0) {

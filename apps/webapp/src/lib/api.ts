@@ -17,6 +17,7 @@ export const WS_BASE_URL = API_BASE_URL.replace(/^http/, 'ws');
 export interface HealthStatus {
   status: 'healthy' | 'unhealthy';
   timestamp: string;
+  configComplete: boolean;
   checks: {
     paperlessConnection: 'ok' | 'error';
     aiConnection: 'ok' | 'error';

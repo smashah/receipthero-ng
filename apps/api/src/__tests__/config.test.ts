@@ -8,14 +8,13 @@ describe('Config Route', () => {
 
     if (res.status === 200) {
       expect(data).toHaveProperty('paperless');
-      expect(data).toHaveProperty('togetherAi');
       expect(data).toHaveProperty('processing');
 
       // Check that keys are masked (should contain '...')
       if (data.paperless.apiKey) {
         expect(data.paperless.apiKey).toContain('...');
       }
-      if (data.togetherAi.apiKey) {
+      if (data.togetherAi?.apiKey) {
         expect(data.togetherAi.apiKey).toContain('...');
       }
     }

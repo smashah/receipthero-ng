@@ -7,8 +7,8 @@ export type AIProvider = z.infer<typeof AIProviderSchema>;
 // Zod schema for application configuration
 export const ConfigSchema = z.object({
   paperless: z.object({
-    host: z.string().url("PAPERLESS_HOST must be a valid URL"),
-    apiKey: z.string().min(1, "PAPERLESS_API_KEY is required"),
+    host: z.string().optional().default(''),
+    apiKey: z.string().optional().default(''),
   }),
   ai: z.object({
     provider: AIProviderSchema.default('openai-compat'),

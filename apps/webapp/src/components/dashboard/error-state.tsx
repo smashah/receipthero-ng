@@ -1,4 +1,5 @@
-import { Loader2, RefreshCw, XCircle } from 'lucide-react';
+import { Loader2, RefreshCw, Settings2, XCircle } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 
 interface ErrorStateProps {
@@ -41,6 +42,13 @@ export function ErrorState({ error, onRetry, isRetrying }: ErrorStateProps) {
               </>
             )}
           </Button>
+          <Link
+            to="/settings"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 border border-input bg-background"
+          >
+            <Settings2 className="h-4 w-4" />
+            Go to Settings
+          </Link>
           <p className="text-xs text-muted-foreground">
             Auto-retry every 30 seconds
           </p>

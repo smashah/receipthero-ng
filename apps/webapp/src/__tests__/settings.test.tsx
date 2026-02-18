@@ -11,6 +11,7 @@ vi.mock('../lib/queries', () => ({
   useTestPaperless: vi.fn(),
   useTestAi: vi.fn(),
   useAvailableCurrencies: vi.fn(() => ({ data: [] })),
+  useWebhookStatus: vi.fn(() => ({ data: undefined })),
 }))
 
 // Import after mocking

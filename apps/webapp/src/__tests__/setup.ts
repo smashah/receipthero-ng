@@ -90,6 +90,7 @@ export const mockHealthData = {
   healthy: {
     status: 'healthy' as const,
     timestamp: new Date().toISOString(),
+    configComplete: true,
     checks: {
       paperlessConnection: 'ok' as const,
       aiConnection: 'ok' as const,
@@ -104,6 +105,7 @@ export const mockHealthData = {
   unhealthy: {
     status: 'unhealthy' as const,
     timestamp: new Date().toISOString(),
+    configComplete: true,
     checks: {
       paperlessConnection: 'error' as const,
       aiConnection: 'error' as const,
