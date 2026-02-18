@@ -12,6 +12,7 @@ import processing from './routes/processing'
 import worker from './routes/worker'
 import queue from './routes/queue'
 import stats from './routes/stats'
+import webhooks from './routes/webhooks'
 import ws from './routes/ws'
 import { websocket } from 'hono/bun'
 import { createLogger, seedDefaultWorkflows } from '@sm-rn/core'
@@ -41,6 +42,7 @@ app.route('/api/worker', worker)
 app.route('/api/queue', queue)
 app.route('/api/stats', stats)
 app.route('/api/workflows', workflows)
+app.route('/api/webhooks', webhooks)
 
 // Export app for RPC type inference (named export to avoid Bun's auto-serve)
 export { app }

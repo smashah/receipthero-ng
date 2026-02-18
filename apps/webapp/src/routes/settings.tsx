@@ -13,7 +13,10 @@ import {
   Workflow,
   Activity,
   Server,
-  Coins
+  Coins,
+  Webhook,
+  Copy,
+  RefreshCw,
 } from 'lucide-react'
 
 import { Button } from '../components/ui/button'
@@ -35,7 +38,8 @@ import {
   useSaveConfig, 
   useTestPaperless, 
   useTestAi,
-  useAvailableCurrencies
+  useAvailableCurrencies,
+  useWebhookStatus
 } from '../lib/queries'
 import { FetchError, type ZodIssue } from '../lib/api'
 import { type Config, type AIProvider, PartialConfigSchema } from '@sm-rn/shared/schemas'
@@ -63,6 +67,7 @@ function SettingsPage() {
   const testPaperlessMutation = useTestPaperless()
   const testAiMutation = useTestAi()
   const { data: availableCurrencies = [] } = useAvailableCurrencies()
+  const { data: webhookStatus } = useWebhookStatus()
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -101,6 +106,10 @@ function SettingsPage() {
     observability: {
       heliconeEnabled: false,
       heliconeApiKey: ''
+    },
+    webhooks: {
+      enabled: false,
+      secret: ''
     }
   })
 
@@ -186,6 +195,35 @@ function SettingsPage() {
     })
   }
 
+  const handleWebhooksChange = (field: keyof NonNullable<Config['webhooks']>, value: any) => {
+    setLocalConfig(prev => ({
+      ...prev,
+      webhooks: { ...prev.webhooks!, [field]: value }
+    }))
+    setErrors(prev => {
+      const next = { ...prev }
+      delete next[`webhooks.${field}`]
+      return next
+    })
+  }
+
+  const generateWebhookSecret = () => {
+    const array = new Uint8Array(32)
+    crypto.getRandomValues(array)
+    const secret = Array.from(array, b => b.toString(16).padStart(2, '0')).join('')
+    handleWebhooksChange('secret', secret)
+    toast.success('Generated new webhook secret')
+  }
+
+  const copyWebhookUrl = () => {
+    const url = `${window.location.origin}/api/webhooks/paperless`
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success('Webhook URL copied to clipboard')
+    }).catch(() => {
+      toast.error('Failed to copy to clipboard')
+    })
+  }
+
   const handleTestPaperless = async () => {
     if (!localConfig.paperless.host || !localConfig.paperless.apiKey) {
       toast.warning('Please fill in Paperless host and API key')
@@ -256,6 +294,9 @@ function SettingsPage() {
     }
     if (payload.observability && isMasked(payload.observability.heliconeApiKey)) {
       delete payload.observability.heliconeApiKey
+    }
+    if (payload.webhooks && isMasked(payload.webhooks.secret)) {
+      delete payload.webhooks.secret
     }
 
     // Clean up empty nested objects
@@ -727,6 +768,118 @@ function SettingsPage() {
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Webhooks */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Webhook className="h-5 w-5" />
+              <CardTitle>Webhooks</CardTitle>
+            </div>
+            <CardDescription>
+              Receive real-time notifications from Paperless-ngx when documents are added
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="webhooks-enabled" className="font-medium">Enable Webhooks</Label>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Accept incoming webhook notifications from Paperless-ngx for near-instant processing
+                </p>
+              </div>
+              <Switch
+                id="webhooks-enabled"
+                checked={localConfig.webhooks?.enabled ?? false}
+                onCheckedChange={(checked) => handleWebhooksChange('enabled', checked)}
+              />
+            </div>
+
+            {localConfig.webhooks?.enabled && (
+              <div className="grid gap-4 pl-6 border-l-2 border-gray-100 ml-2">
+                {/* Webhook URL (read-only) */}
+                <div className="grid gap-2">
+                  <Label>Webhook URL</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/paperless` : '/api/webhooks/paperless'}
+                      className="font-mono text-xs bg-muted"
+                    />
+                    <Button variant="outline" size="sm" onClick={copyWebhookUrl}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Use this URL in your Paperless-ngx workflow webhook action
+                  </p>
+                </div>
+
+                {/* Secret Token */}
+                <div className="grid gap-2">
+                  <Label htmlFor="webhook-secret">Secret Token (optional)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="webhook-secret"
+                      type="password"
+                      placeholder="Leave empty for no authentication"
+                      value={localConfig.webhooks?.secret || ''}
+                      onChange={(e) => handleWebhooksChange('secret', e.target.value)}
+                      className={errors['webhooks.secret'] ? 'border-destructive' : ''}
+                    />
+                    <Button variant="outline" size="sm" onClick={generateWebhookSecret}>
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <ErrorMessage path="webhooks.secret" />
+                  <p className="text-xs text-muted-foreground">
+                    If set, Paperless must send this token as a Bearer token in the Authorization header
+                  </p>
+                </div>
+
+                {/* Queue Status */}
+                {webhookStatus && (
+                  <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                    <h4 className="text-sm font-medium mb-2">Queue Status</h4>
+                    <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                      <div>
+                        <div className="font-semibold text-lg">{webhookStatus.queue.pending}</div>
+                        <div className="text-muted-foreground">Pending</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-lg">{webhookStatus.queue.processing}</div>
+                        <div className="text-muted-foreground">Processing</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-lg">{webhookStatus.queue.completed}</div>
+                        <div className="text-muted-foreground">Completed</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-lg">{webhookStatus.queue.failed}</div>
+                        <div className="text-muted-foreground">Failed</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Setup instructions */}
+                <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                  <h4 className="text-sm font-medium mb-2">Paperless-ngx Setup</h4>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Go to <strong>Settings &rarr; Workflows</strong> in Paperless-ngx</li>
+                    <li>Create a new workflow triggered on <strong>Document Added</strong></li>
+                    <li>Add a <strong>Webhook</strong> action with the URL above</li>
+                    <li>Set the body to: <code className="bg-background px-1 rounded">{'{"document_id": "{{ document_id }}"}'}</code></li>
+                    {localConfig.webhooks?.secret && (
+                      <li>Add a custom header: <code className="bg-background px-1 rounded">Authorization: Bearer {'<your-secret>'}</code></li>
+                    )}
+                    <li>Save and test with a new document upload</li>
+                  </ol>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

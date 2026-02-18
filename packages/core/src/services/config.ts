@@ -47,6 +47,10 @@ function getDefaultConfigTemplate(): Record<string, unknown> {
       heliconeEnabled: false,
       heliconeApiKey: '',
     },
+    webhooks: {
+      enabled: false,
+      secret: '',
+    },
   };
 }
 
@@ -186,6 +190,14 @@ export function loadConfig(): Config {
         process.env.HELICONE_ENABLED === 'true'
       ),
       heliconeApiKey: getConfigValue(fileConfig, ['observability', 'heliconeApiKey'], process.env.HELICONE_API_KEY),
+    },
+    webhooks: {
+      enabled: getConfigValueBoolean(
+        fileConfig,
+        ['webhooks', 'enabled'],
+        process.env.WEBHOOK_ENABLED === 'true'
+      ),
+      secret: getConfigValue(fileConfig, ['webhooks', 'secret'], process.env.WEBHOOK_SECRET),
     },
   };
 

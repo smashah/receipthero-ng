@@ -23,6 +23,7 @@ import {
   getCurrencyTotals as getCurrencyTotalsFn,
   getDocumentThumbnail,
   getDocumentImage,
+  getWebhookStatus as getWebhookStatusFn,
   type HealthStatus,
   type SaveConfigResponse,
   type TestConnectionResponse,
@@ -32,6 +33,7 @@ import {
   type TriggerScanResponse,
   type CurrencyTotalsResponse,
   type DocumentImageResponse,
+  type WebhookStatusResponse,
 } from './server';
 
 // Re-export types for convenience
@@ -46,6 +48,7 @@ export type {
   ProcessingLog,
   CurrencyTotalsResponse,
   DocumentImageResponse,
+  WebhookStatusResponse,
 };
 export type { Config };
 
@@ -77,6 +80,11 @@ export const workerKeys = {
 export const queueKeys = {
   all: ['queue'] as const,
   status: () => [...queueKeys.all, 'status'] as const,
+};
+
+export const webhookKeys = {
+  all: ['webhooks'] as const,
+  status: () => [...webhookKeys.all, 'status'] as const,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -356,5 +364,20 @@ export function useClearSkipped() {
       queryClient.invalidateQueries({ queryKey: healthKeys.all });
       queryClient.invalidateQueries({ queryKey: queueKeys.all });
     },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Webhook Queries
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Fetches webhook status (enabled state, secret presence, queue stats).
+ */
+export function useWebhookStatus() {
+  return useQuery({
+    queryKey: webhookKeys.status(),
+    queryFn: () => getWebhookStatusFn(),
+    refetchInterval: 30_000,
   });
 }

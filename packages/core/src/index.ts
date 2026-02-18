@@ -15,3 +15,4 @@ export * from './services/skipped-documents';
 export * from './services/workflow';
 export * from './services/workflow-executor';
 export * from './services/extract';
+export * from './services/webhook-queue';

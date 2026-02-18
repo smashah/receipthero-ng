@@ -1152,3 +1152,55 @@ async function runLegacyAutomation(client: PaperlessClient, adapter: AIAdapter, 
   };
 }
 
+/**
+ * Process specific documents by ID (webhook-triggered).
+ * Unlike runAutomation(), this skips discovery and processes only the given IDs.
+ * 
+ * Note: Concurrency control is handled by the caller via workerState.acquireLock()
+ */
+export async function processDocumentsByIds(documentIds: number[]): Promise<{
+  processed: number;
+  failed: number;
+  skipped: number;
+}> {
+  logger.info(`Processing ${documentIds.length} webhook-queued document(s): [${documentIds.join(', ')}]`);
+
+  // Load configuration
+  let config;
+  try {
+    config = loadConfig();
+  } catch (error: any) {
+    logger.error('Failed to load configuration', { error: error.message });
+    return { processed: 0, failed: documentIds.length, skipped: 0 };
+  }
+
+  // Initialize Paperless client
+  const client = new PaperlessClient({
+    host: config.paperless.host,
+    apiKey: config.paperless.apiKey,
+    processedTagName: config.processing.processedTag,
+  });
+
+  // Create AI adapter
+  const adapter = createAIAdapter(config);
+  const retryQueue = new RetryQueue(config.processing.maxRetries);
+
+  let processed = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (const documentId of documentIds) {
+    try {
+      await reporter.report('receipt:detected', { documentId, status: 'detected', progress: 0 });
+      await processPaperlessDocument(client, documentId, adapter, retryQueue, config.processing.failedTag);
+      processed++;
+    } catch (error: any) {
+      logger.error(`Failed to process webhook-queued document ${documentId}`, { error: error.message });
+      failed++;
+    }
+  }
+
+  logger.info(`Webhook-queued processing complete: ${processed} processed, ${failed} failed, ${skipped} skipped`);
+  return { processed, failed, skipped };
+}
+
