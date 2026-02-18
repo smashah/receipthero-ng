@@ -2,6 +2,9 @@ import { ConfigSchema, type Config } from '@sm-rn/shared/schemas';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createLogger } from './logger';
+import { db, schema } from '../db';
+import { count } from 'drizzle-orm';
+import { seedDefaultWorkflows } from './workflow';
 
 const logger = createLogger('config');
 
@@ -215,6 +218,20 @@ export function loadConfig(): Config {
       result.data.ai.baseURL = 'https://api.together.xyz/v1';
     }
   }
+
+  // Workflow migration logic (async - don't await in sync loadConfig but trigger)
+  // In a real app, this might be handled by an init function
+  setTimeout(async () => {
+    try {
+      const [{ value }] = await db.select({ value: count() }).from(schema.workflows);
+      if (value === 0) {
+        logger.info('No workflows found in database. Seeding default workflow from config...');
+        await seedDefaultWorkflows();
+      }
+    } catch (e) {
+      // Ignore errors during migration check
+    }
+  }, 0);
 
   return result.data;
 }

@@ -15,6 +15,13 @@
       "when": 1770977103309,
       "tag": "0001_hard_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1771414283568,
+      "tag": "0002_good_marvex",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { RefreshCw, Settings } from 'lucide-react';
+import { RefreshCw, Settings, Workflow } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
@@ -61,6 +61,12 @@ export function DashboardHeader({
           <RefreshCw className={cn("h-4 w-4 mr-2", (isTriggeringScan || isRefreshing) && "animate-spin")} />
           {isTriggeringScan ? "Scanning..." : "Refresh"}
         </Button>
+        <Link to="/workflows">
+          <Button variant="outline" size="sm">
+            <Workflow className="h-4 w-4 mr-2" />
+            Workflows
+          </Button>
+        </Link>
         <Link to="/settings">
           <Button>
             <Settings className="h-4 w-4 mr-2" />

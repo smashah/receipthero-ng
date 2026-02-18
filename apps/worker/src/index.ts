@@ -1,4 +1,4 @@
-import { runAutomation, loadConfig, createLogger, workerState, webhookQueueService, processDocumentsByIds } from '@sm-rn/core';
+import { runAutomation, loadConfig, createLogger, workerState, seedDefaultWorkflows, webhookQueueService, processDocumentsByIds } from '@sm-rn/core';
 
 const logger = createLogger('worker');
 let isShuttingDown = false;
@@ -12,6 +12,9 @@ async function workerLoop() {
 
   // Initialize worker state on startup
   await workerState.initialize();
+
+  // Seed default workflows on first run
+  await seedDefaultWorkflows();
 
   // Short poll interval to stay responsive to manual triggers
   const POLL_INTERVAL = 5000; // 5 seconds

@@ -14,6 +14,7 @@ export type NewRetryQueueEntry = typeof retryQueue.$inferInsert;
 export const processingLogs = sqliteTable('processing_logs', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   documentId: integer('documentId').notNull(),
+  workflowId: integer('workflowId'), // Optional: links to a specific workflow
   status: text('status').notNull(), // 'detected', 'processing', 'completed', 'failed', 'retrying'
   message: text('message'),
   progress: integer('progress').notNull().default(0),
@@ -22,13 +23,38 @@ export const processingLogs = sqliteTable('processing_logs', {
   vendor: text('vendor'),
   amount: integer('amount'), // Stored in cents/base units
   currency: text('currency'),
-  receiptData: text('receiptData'), // Full extracted JSON string
+  receiptData: text('receiptData'), // Full extracted JSON string (Legacy)
+  extractedData: text('extractedData'), // Generic extracted JSON string
   createdAt: text('createdAt').notNull(),
   updatedAt: text('updatedAt').notNull(),
 });
 
 export type ProcessingLogEntry = typeof processingLogs.$inferSelect;
 export type NewProcessingLogEntry = typeof processingLogs.$inferInsert;
+
+export const workflows = sqliteTable('workflows', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').unique().notNull(),
+  slug: text('slug').unique().notNull(),
+  description: text('description'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  priority: integer('priority').notNull().default(0),
+  triggerTag: text('triggerTag').notNull(),
+  zodSource: text('zodSource').notNull(), // User's Zod code verbatim
+  jsonSchema: text('jsonSchema').notNull(), // JSON Schema string converted from Zod
+  promptInstructions: text('promptInstructions'),
+  titleTemplate: text('titleTemplate'),
+  outputMapping: text('outputMapping').notNull(), // JSON string of output mapping config
+  processedTag: text('processedTag').notNull(),
+  failedTag: text('failedTag'),
+  skippedTag: text('skippedTag'),
+  isBuiltIn: integer('isBuiltIn', { mode: 'boolean' }).notNull().default(false),
+  createdAt: text('createdAt').notNull(),
+  updatedAt: text('updatedAt').notNull(),
+});
+
+export type Workflow = typeof workflows.$inferSelect;
+export type NewWorkflow = typeof workflows.$inferInsert;
 
 export const logs = sqliteTable('logs', {
   id: integer('id').primaryKey({ autoIncrement: true }),
