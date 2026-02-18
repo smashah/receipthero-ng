@@ -81,7 +81,8 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
 
   const isComplete = log.status === 'completed';
   const isFailed = log.status === 'failed';
-  const receiptData = log.receiptData ? JSON.parse(log.receiptData) : null;
+  const dataString = log.extractedData || log.receiptData;
+  const extractedData = dataString ? JSON.parse(dataString) : null;
 
   // Build data URLs from base64 responses
   const thumbnailSrc = thumbnailData 
@@ -215,15 +216,15 @@ function ProcessingDetailsDialog({ log, open, onOpenChange }: {
 
           {/* Right Side: Logs or JSON - Scrollable */}
           <div className="w-1/2 flex flex-col p-4 overflow-y-auto bg-zinc-50">
-            {receiptData ? (
+            {extractedData ? (
               <div className="flex flex-col gap-6">
                 {/* JSON Section */}
                 <div className="flex flex-col min-h-[50vh]">
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-2 sticky top-0 bg-zinc-50 py-2 -mt-2">
-                    <Brain className="h-4 w-4" /> Extracted Data
+                    <Brain className="h-4 w-4" /> Extracted Data {log.workflowName && <Badge variant="outline" className="ml-2">{log.workflowName}</Badge>}
                   </h3>
                   <JsonViewer 
-                    data={receiptData} 
+                    data={extractedData} 
                     className="flex-1"
                     searchable={true} 
                   />
@@ -332,16 +333,25 @@ function ProcessedItem({ log }: { log: ProcessingLog }) {
   
   return (
     <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50 text-sm animate-in fade-in duration-300">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         {getIcon()}
-        <span className="font-medium max-w-[150px] md:max-w-[300px] truncate">
-          {log.vendor || log.fileName || `Document #${log.documentId}`}
-        </span>
-        {log.amount !== undefined && (
-          <span className="text-muted-foreground hidden sm:inline">
-            • {(log.amount / 100).toFixed(2)} {log.currency}
-          </span>
-        )}
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium truncate max-w-[150px] md:max-w-[300px]">
+              {log.vendor || log.fileName || `Document #${log.documentId}`}
+            </span>
+            {log.workflowName && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1 leading-none font-normal opacity-70">
+                {log.workflowName}
+              </Badge>
+            )}
+          </div>
+          {log.amount !== undefined && (
+            <span className="text-[10px] text-muted-foreground tabular-nums">
+              {(log.amount / 100).toFixed(2)} {log.currency}
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-4 flex-shrink-0">
         <span className="text-xs text-muted-foreground tabular-nums">

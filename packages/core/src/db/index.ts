@@ -6,7 +6,7 @@ import * as path from 'path';
 import { createLogger } from '../services/logger';
 
 const logger = createLogger('db');
-const DB_PATH = process.env.DATABASE_PATH || '/app/data/receipthero.db';
+const DB_PATH = process.env.DATABASE_PATH || (process.env.NODE_ENV === 'test' ? './receipthero.test.db' : '/app/data/receipthero.db');
 
 // Ensure directory exists
 const dir = path.dirname(DB_PATH);

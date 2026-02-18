@@ -4,6 +4,7 @@ import health from './routes/health'
 import config from './routes/config'
 import testPaperless from './routes/test-paperless'
 import testAi from './routes/test-ai'
+import workflows from './routes/workflows'
 import ocr from './routes/ocr'
 import events from './routes/events'
 import documents from './routes/documents'
@@ -13,7 +14,7 @@ import queue from './routes/queue'
 import stats from './routes/stats'
 import ws from './routes/ws'
 import { websocket } from 'hono/bun'
-import { createLogger } from '@sm-rn/core'
+import { createLogger, seedDefaultWorkflows } from '@sm-rn/core'
 import { logger as honoLogger } from 'hono/logger'
 
 const logger = createLogger('api')
@@ -39,6 +40,7 @@ app.route('/api/processing', processing)
 app.route('/api/worker', worker)
 app.route('/api/queue', queue)
 app.route('/api/stats', stats)
+app.route('/api/workflows', workflows)
 
 // Export app for RPC type inference (named export to avoid Bun's auto-serve)
 export { app }
@@ -48,6 +50,9 @@ export type AppType = typeof app
 if (import.meta.main) {
   const port = parseInt('3001', 10)
   logger.info(`🚀 API server starting on port ${port}...`)
+
+  // Seed default workflows on first run
+  await seedDefaultWorkflows()
 
   Bun.serve({
     port,

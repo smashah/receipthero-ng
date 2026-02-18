@@ -4,13 +4,27 @@ import userEvent from '@testing-library/user-event'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient, mockHealthData, mockConfigData } from './setup'
 
-// Mock the queries module
-vi.mock('../lib/queries', () => ({
-  useHealth: vi.fn(),
-  useConfig: vi.fn(),
-  useProcessingLogs: vi.fn(),
-  useAppLogs: vi.fn(),
-}))
+// Mock the queries module — use importOriginal to avoid missing export errors
+vi.mock('../lib/queries', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/queries')>()
+  return {
+    ...actual,
+    useHealth: vi.fn(),
+    useConfig: vi.fn(),
+    useProcessingLogs: vi.fn(),
+    useAppLogs: vi.fn(),
+    useCurrencyTotals: vi.fn(),
+    usePauseWorker: vi.fn(),
+    useResumeWorker: vi.fn(),
+    useRetryAllQueue: vi.fn(),
+    useClearQueue: vi.fn(),
+    useTriggerScan: vi.fn(),
+    useRetryProcessing: vi.fn(),
+    useDocumentLogs: vi.fn(),
+    useDocumentThumbnail: vi.fn(),
+    useAvailableCurrencies: vi.fn(),
+  }
+})
 
 // Mock the events hook
 vi.mock('../hooks/use-app-events', () => ({
@@ -18,7 +32,7 @@ vi.mock('../hooks/use-app-events', () => ({
 }))
 
 // Import after mocking
-import { useHealth, useConfig, useProcessingLogs, useAppLogs } from '../lib/queries'
+import { useHealth, useConfig, useProcessingLogs, useAppLogs, useCurrencyTotals, usePauseWorker, useResumeWorker, useRetryAllQueue, useClearQueue, useTriggerScan, useRetryProcessing, useDocumentLogs, useDocumentThumbnail } from '../lib/queries'
 import { useAppEvents } from '../hooks/use-app-events'
 // Import the Route to get the component
 import { Route } from '../routes/index'
@@ -28,6 +42,15 @@ const mockUseConfig = useConfig as ReturnType<typeof vi.fn>
 const mockUseProcessingLogs = useProcessingLogs as ReturnType<typeof vi.fn>
 const mockUseAppLogs = useAppLogs as ReturnType<typeof vi.fn>
 const mockUseAppEvents = useAppEvents as ReturnType<typeof vi.fn>
+const mockUseCurrencyTotals = useCurrencyTotals as ReturnType<typeof vi.fn>
+const mockUsePauseWorker = usePauseWorker as ReturnType<typeof vi.fn>
+const mockUseResumeWorker = useResumeWorker as ReturnType<typeof vi.fn>
+const mockUseRetryAllQueue = useRetryAllQueue as ReturnType<typeof vi.fn>
+const mockUseClearQueue = useClearQueue as ReturnType<typeof vi.fn>
+const mockUseTriggerScan = useTriggerScan as ReturnType<typeof vi.fn>
+const mockUseRetryProcessing = useRetryProcessing as ReturnType<typeof vi.fn>
+const mockUseDocumentLogs = useDocumentLogs as ReturnType<typeof vi.fn>
+const mockUseDocumentThumbnail = useDocumentThumbnail as ReturnType<typeof vi.fn>
 
 // Get the component from the Route
 const DashboardPage = Route.options.component!
@@ -58,6 +81,20 @@ function setupDefaultMocks() {
     appLogs: [],
     isLoading: false,
   })
+  mockUseCurrencyTotals.mockReturnValue({
+    data: null,
+    isLoading: false,
+  })
+  const mockMutate = vi.fn()
+  const mutationDefaults = { mutate: mockMutate, mutateAsync: vi.fn(), isPending: false, isError: false, isSuccess: false, error: null, data: undefined, reset: vi.fn(), status: 'idle' as const, variables: undefined }
+  mockUsePauseWorker.mockReturnValue(mutationDefaults)
+  mockUseResumeWorker.mockReturnValue(mutationDefaults)
+  mockUseRetryAllQueue.mockReturnValue(mutationDefaults)
+  mockUseClearQueue.mockReturnValue(mutationDefaults)
+  mockUseTriggerScan.mockReturnValue(mutationDefaults)
+  mockUseRetryProcessing.mockReturnValue(mutationDefaults)
+  mockUseDocumentLogs.mockReturnValue({ data: [], isLoading: false })
+  mockUseDocumentThumbnail.mockReturnValue({ data: null, isLoading: false })
 }
 
 function renderDashboard() {

@@ -9,8 +9,10 @@ import {
   Loader2, 
   Check, 
   ArrowLeft,
-  Server,
+  ArrowRight,
+  Workflow,
   Activity,
+  Server,
   Coins
 } from 'lucide-react'
 
@@ -523,9 +525,18 @@ function SettingsPage() {
 
             {/* Processing Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Activity className="h-4 w-4" /> Processing
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Activity className="h-4 w-4" /> Processing
+                </h3>
+                <Link 
+                  to="/workflows" 
+                  className="text-sm font-medium text-primary hover:underline flex items-center gap-1 group"
+                >
+                  <Workflow className="h-4 w-4" /> Manage Workflows
+                  <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -604,46 +615,52 @@ function SettingsPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tag-receipt">Receipt Tag</Label>
-                  <Input
-                    id="tag-receipt"
-                    value={localConfig.processing.receiptTag}
-                    onChange={(e) => handleProcessingChange('receiptTag', e.target.value)}
-                    className={errors['processing.receiptTag'] ? 'border-destructive' : ''}
-                  />
-                  <ErrorMessage path="processing.receiptTag" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tag-processed">Processed Tag</Label>
-                  <Input
-                    id="tag-processed"
-                    value={localConfig.processing.processedTag}
-                    onChange={(e) => handleProcessingChange('processedTag', e.target.value)}
-                    className={errors['processing.processedTag'] ? 'border-destructive' : ''}
-                  />
-                  <ErrorMessage path="processing.processedTag" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tag-failed">Failed Tag</Label>
-                  <Input
-                    id="tag-failed"
-                    value={localConfig.processing.failedTag}
-                    onChange={(e) => handleProcessingChange('failedTag', e.target.value)}
-                    className={errors['processing.failedTag'] ? 'border-destructive' : ''}
-                  />
-                  <ErrorMessage path="processing.failedTag" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tag-skipped">Skipped Tag</Label>
-                  <Input
-                    id="tag-skipped"
-                    value={localConfig.processing.skippedTag}
-                    onChange={(e) => handleProcessingChange('skippedTag', e.target.value)}
-                    className={errors['processing.skippedTag'] ? 'border-destructive' : ''}
-                  />
-                  <ErrorMessage path="processing.skippedTag" />
+              <div className="space-y-3 p-4 rounded-lg border border-border/50 bg-muted/30">
+                <p className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Workflow className="h-3 w-3" />
+                  These tags are used by the default Receipt workflow. For custom workflows, configure tags in the Workflow editor.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tag-receipt">Receipt Tag <span className="text-[10px] opacity-70 font-normal">(managed via Workflows)</span></Label>
+                    <Input
+                      id="tag-receipt"
+                      value={localConfig.processing.receiptTag}
+                      onChange={(e) => handleProcessingChange('receiptTag', e.target.value)}
+                      className={errors['processing.receiptTag'] ? 'border-destructive' : ''}
+                    />
+                    <ErrorMessage path="processing.receiptTag" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tag-processed">Processed Tag</Label>
+                    <Input
+                      id="tag-processed"
+                      value={localConfig.processing.processedTag}
+                      onChange={(e) => handleProcessingChange('processedTag', e.target.value)}
+                      className={errors['processing.processedTag'] ? 'border-destructive' : ''}
+                    />
+                    <ErrorMessage path="processing.processedTag" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tag-failed">Failed Tag</Label>
+                    <Input
+                      id="tag-failed"
+                      value={localConfig.processing.failedTag}
+                      onChange={(e) => handleProcessingChange('failedTag', e.target.value)}
+                      className={errors['processing.failedTag'] ? 'border-destructive' : ''}
+                    />
+                    <ErrorMessage path="processing.failedTag" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tag-skipped">Skipped Tag</Label>
+                    <Input
+                      id="tag-skipped"
+                      value={localConfig.processing.skippedTag}
+                      onChange={(e) => handleProcessingChange('skippedTag', e.target.value)}
+                      className={errors['processing.skippedTag'] ? 'border-destructive' : ''}
+                    />
+                    <ErrorMessage path="processing.skippedTag" />
+                  </div>
                 </div>
               </div>
 

@@ -88,6 +88,8 @@ export type ProcessingStatus = 'detected' | 'processing' | 'completed' | 'failed
 export interface ProcessingLog {
   id: number;
   documentId: number;
+  workflowId?: number;
+  workflowName?: string;
   status: ProcessingStatus;
   message?: string;
   progress: number;
@@ -96,7 +98,8 @@ export interface ProcessingLog {
   vendor?: string;
   amount?: number;
   currency?: string;
-  receiptData?: string; // Full extracted JSON string
+  receiptData?: string; // Full extracted JSON string (Legacy)
+  extractedData?: string; // Generic extracted JSON string
   createdAt: string;
   updatedAt: string;
 }
@@ -107,11 +110,17 @@ export type ProcessingEventType =
   | 'receipt:success'
   | 'receipt:failed'
   | 'receipt:retry'
-  | 'receipt:skipped';
+  | 'receipt:skipped'
+  | 'workflow:detected'
+  | 'workflow:processing'
+  | 'workflow:success'
+  | 'workflow:failed'
+  | 'workflow:retry'
+  | 'workflow:skipped';
 
 export interface ProcessingEvent {
   type: ProcessingEventType;
-  payload: Partial<ProcessingLog> & { documentId: number };
+  payload: Partial<ProcessingLog> & { documentId: number; workflowId?: number; workflowName?: string };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
