@@ -13,12 +13,11 @@
   },
   "dependencies": {
     "@sm-rn/shared": "workspace:*",
-    "@tanstack/ai": "0.4.2",
-    "@tanstack/ai-ollama": "0.4.0",
-    "@tanstack/ai-openai": "0.4.0",
+    "@tanstack/ai": "0.5.1",
+    "@tanstack/ai-ollama": "0.5.0",
+    "@tanstack/ai-openai": "0.5.0",
     "@upstash/ratelimit": "catalog:",
     "@upstash/redis": "catalog:",
-    "ajv": "^8.18.0",
     "drizzle-orm": "^0.38.4",
     "zod": "catalog:"
   },

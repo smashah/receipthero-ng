@@ -9,15 +9,39 @@ catalogs:
     '@types/node':
       specifier: ^22.10.2
       version: 22.19.7
+    '@types/react':
+      specifier: ^19.2.0
+      version: 19.2.10
+    '@types/react-dom':
+      specifier: ^19.2.0
+      version: 19.2.3
     '@upstash/ratelimit':
       specifier: ^2.0.8
       version: 2.0.8
     '@upstash/redis':
       specifier: ^1.36.1
       version: 1.36.1
+    '@vitejs/plugin-react':
+      specifier: ^5.0.4
+      version: 5.1.2
+    class-variance-authority:
+      specifier: ^0.7.1
+      version: 0.7.1
+    clsx:
+      specifier: ^2.1.1
+      version: 2.1.1
     hono:
       specifier: ^4.7.11
       version: 4.11.7
+    tailwind-merge:
+      specifier: ^3.4.0
+      version: 3.4.0
+    tailwindcss:
+      specifier: ^4.0.6
+      version: 4.1.18
+    tw-animate-css:
+      specifier: ^1.4.0
+      version: 1.4.0
     typescript:
       specifier: ^5.7.2
       version: 5.9.3
@@ -225,23 +249,20 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@tanstack/ai':
-        specifier: 0.4.2
-        version: 0.4.2
+        specifier: 0.5.1
+        version: 0.5.1
       '@tanstack/ai-ollama':
-        specifier: 0.4.0
-        version: 0.4.0(@tanstack/ai@0.4.2)
+        specifier: 0.5.0
+        version: 0.5.0(@tanstack/ai@0.5.1)
       '@tanstack/ai-openai':
-        specifier: 0.4.0
-        version: 0.4.0(@tanstack/ai@0.4.2)(ws@8.19.0)(zod@4.3.6)
+        specifier: 0.5.0
+        version: 0.5.0(@tanstack/ai@0.5.1)(ws@8.19.0)(zod@4.3.6)
       '@upstash/ratelimit':
         specifier: 'catalog:'
         version: 2.0.8(@upstash/redis@1.36.1)
       '@upstash/redis':
         specifier: 'catalog:'
         version: 1.36.1
-      ajv:
-        specifier: ^8.18.0
-        version: 8.18.0
       drizzle-orm:
         specifier: ^0.38.4
         version: 0.38.4(@types/react@19.2.10)(bun-types@1.3.8)(react@19.2.4)
@@ -1709,19 +1730,19 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7
 
-  '@tanstack/ai-ollama@0.4.0':
-    resolution: {integrity: sha512-hbdOGNzE7HbUuS15JUrNOUPwHNAFZh+Hh70thXr/APx8rqp+0B00Lk2PUFnVKoqbtFXpUaYL6lFL+f5uoOcTvw==}
+  '@tanstack/ai-ollama@0.5.0':
+    resolution: {integrity: sha512-CR/f6OS7WzrC1VIK819lDSHeEJWfpaEVyO0bSmE7EGUAfbv+JmDLd8tI2Pk/DhIRVw/rk0Zlcn35jWvvXLjwTg==}
     peerDependencies:
-      '@tanstack/ai': ^0.4.0
+      '@tanstack/ai': ^0.5.0
 
-  '@tanstack/ai-openai@0.4.0':
-    resolution: {integrity: sha512-2XWaD3WiuizdAnLL4dO+Tz6U+DSdCfZZckheOEAIjFuUdoiC6GJg45OTjKkkSFlp6hRsQmEiIgJFnEoFeAHYkQ==}
+  '@tanstack/ai-openai@0.5.0':
+    resolution: {integrity: sha512-0xJg+BkqVgIRbl4LyiPQWCLOapfGpK4lSzqjaWRkz2Hf1C3m4exg76rBuv1mvr4G3XAR5SnMRSj3XxlWMuRImA==}
     peerDependencies:
-      '@tanstack/ai': ^0.4.0
+      '@tanstack/ai': ^0.5.0
       zod: ^4.0.0
 
-  '@tanstack/ai@0.4.2':
-    resolution: {integrity: sha512-t4mwR6kHn1Ew5RTM3vaHX9FSI0RBb/FpyJUDY/2BhyO26XXJrM+ac196B32cOYnpDkt+wGUsiNn84/NbMv9n3Q==}
+  '@tanstack/ai@0.5.1':
+    resolution: {integrity: sha512-kHZb8Q/aI/z20d4CB7U49Pbk8IoypbFA1saDYlPBFPbdSzikeutJ2oRyN4hY2qtrxnfyC1oHOhiWkDH0i+5kwg==}
     engines: {node: '>=18'}
 
   '@tanstack/devtools-client@0.0.3':
@@ -2261,9 +2282,6 @@ packages:
 
   ajv@8.17.1:
     resolution: {integrity: sha512-B/gBuNg5SiMTrPkC+A2+cW0RszwxYmn6VYxB/inlBStS5nx6xHIt/ehKRhIMhqusl7a8LjQoZnjCs5vhwxOQ1g==}
-
-  ajv@8.18.0:
-    resolution: {integrity: sha512-PlXPeEWMXMZ7sPYOHqmDyCJzcfNrUr3fGNKtezX14ykXOEIvyK81d+qydx89KY5O71FKMPaQ2vBfBFI5NHR63A==}
 
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
@@ -5778,20 +5796,20 @@ snapshots:
       tailwindcss: 4.1.18
       vite: 7.3.1(@types/node@22.19.7)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)
 
-  '@tanstack/ai-ollama@0.4.0(@tanstack/ai@0.4.2)':
+  '@tanstack/ai-ollama@0.5.0(@tanstack/ai@0.5.1)':
     dependencies:
-      '@tanstack/ai': 0.4.2
+      '@tanstack/ai': 0.5.1
       ollama: 0.6.3
 
-  '@tanstack/ai-openai@0.4.0(@tanstack/ai@0.4.2)(ws@8.19.0)(zod@4.3.6)':
+  '@tanstack/ai-openai@0.5.0(@tanstack/ai@0.5.1)(ws@8.19.0)(zod@4.3.6)':
     dependencies:
-      '@tanstack/ai': 0.4.2
+      '@tanstack/ai': 0.5.1
       openai: 6.19.0(ws@8.19.0)(zod@4.3.6)
       zod: 4.3.6
     transitivePeerDependencies:
       - ws
 
-  '@tanstack/ai@0.4.2':
+  '@tanstack/ai@0.5.1':
     dependencies:
       '@tanstack/devtools-event-client': 0.4.0
       partial-json: 0.1.7
@@ -6473,13 +6491,6 @@ snapshots:
       uri-js: 4.4.1
 
   ajv@8.17.1:
-    dependencies:
-      fast-deep-equal: 3.1.3
-      fast-uri: 3.1.0
-      json-schema-traverse: 1.0.0
-      require-from-string: 2.0.2
-
-  ajv@8.18.0:
     dependencies:
       fast-deep-equal: 3.1.3
       fast-uri: 3.1.0
