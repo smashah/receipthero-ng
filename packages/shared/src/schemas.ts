@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // AI provider enum
-export const AIProviderSchema = z.enum(['openai-compat', 'ollama', 'openrouter']);
+export const AIProviderSchema = z.enum(['openai-compat', 'together-ai', 'ollama', 'openrouter']);
 export type AIProvider = z.infer<typeof AIProviderSchema>;
 
 // Zod schema for application configuration
@@ -13,7 +13,8 @@ export const ConfigSchema = z.object({
   ai: z.object({
     provider: AIProviderSchema.default('openai-compat'),
     apiKey: z.string().optional(),
-    baseURL: z.string().url().optional(),
+    // Accept empty string from the form and treat it as "no override"
+    baseURL: z.string().transform(v => v === '' ? undefined : v).pipe(z.string().url().optional()),
     model: z.string().default('meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8'),
   }),
   // Kept for backward compatibility — resolved in config.ts
@@ -67,6 +68,13 @@ export const PartialConfigSchema = z.object({
   paperless: z.object({
     host: z.string().url("PAPERLESS_HOST must be a valid URL").optional(),
     apiKey: z.string().min(1, "PAPERLESS_API_KEY is required").optional(),
+  }).optional(),
+  ai: z.object({
+    provider: AIProviderSchema.optional(),
+    apiKey: z.string().optional(),
+    // Accept empty string from the form and treat it as "no override"
+    baseURL: z.string().transform(v => v === '' ? undefined : v).pipe(z.string().url().optional()),
+    model: z.string().optional(),
   }).optional(),
   togetherAi: z.object({
     apiKey: z.string().min(1, "TOGETHER_API_KEY is required").optional(),

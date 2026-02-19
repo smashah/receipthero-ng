@@ -229,8 +229,10 @@ export function useSaveConfig() {
   return useMutation({
     mutationFn: (config: Partial<Config>) => saveConfigFn({ data: config }),
     onSuccess: () => {
-      // Invalidate config and health queries to refresh state
-      queryClient.invalidateQueries({ queryKey: configKeys.all });
+      // Remove (not just invalidate) the config cache so the settings page
+      // always fetches fresh data on next mount instead of briefly showing
+      // the stale pre-save values via the useEffect sync.
+      queryClient.removeQueries({ queryKey: configKeys.all });
       queryClient.invalidateQueries({ queryKey: healthKeys.all });
     },
   });

@@ -11,6 +11,13 @@ function resolveEndpoint(config: Config): { baseURL: string; apiKey: string; mod
     case 'openai-compat':
       if (!ai.apiKey) throw new Error('AI API key is required for openai-compat provider.');
       return {
+        baseURL: ai.baseURL || 'https://api.openai.com/v1',
+        apiKey: ai.apiKey,
+        model: ai.model,
+      };
+    case 'together-ai':
+      if (!ai.apiKey) throw new Error('AI API key is required for Together AI provider.');
+      return {
         baseURL: ai.baseURL || 'https://api.together.xyz/v1',
         apiKey: ai.apiKey,
         model: ai.model,
@@ -23,9 +30,8 @@ function resolveEndpoint(config: Config): { baseURL: string; apiKey: string; mod
         model: ai.model,
       };
     case 'ollama':
-      // Ollama's OpenAI-compat endpoint lives at /v1 on the Ollama host
       return {
-        baseURL: `${ai.baseURL || 'http://localhost:11434'}/v1`,
+        baseURL: ai.baseURL || 'http://localhost:11434/v1',
         apiKey: 'ollama',
         model: ai.model,
       };

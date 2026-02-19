@@ -132,17 +132,38 @@ function SettingsPage() {
     })
   }
 
+  // Default base URLs per provider
+  const PROVIDER_BASE_URLS: Record<string, string> = {
+    'openai-compat': 'https://api.openai.com/v1',
+    'together-ai': 'https://api.together.xyz/v1',
+    'openrouter': 'https://openrouter.ai/api/v1',
+    'ollama': 'http://localhost:11434/v1',
+  }
+
   const handleAiChange = (field: keyof Config['ai'], value: string) => {
-    setLocalConfig(prev => ({
-      ...prev,
-      ai: { ...prev.ai, [field]: value }
-    }))
+    if (field === 'provider') {
+      // Auto-reset baseURL to the correct default for the new provider
+      setLocalConfig(prev => ({
+        ...prev,
+        ai: {
+          ...prev.ai,
+          provider: value as AIProvider,
+          baseURL: PROVIDER_BASE_URLS[value] || '',
+        }
+      }))
+    } else {
+      setLocalConfig(prev => ({
+        ...prev,
+        ai: { ...prev.ai, [field]: value }
+      }))
+    }
     setErrors(prev => {
       const next = { ...prev }
       delete next[`ai.${field}`]
       return next
     })
   }
+
 
   const handleProcessingChange = (field: keyof Config['processing'], value: string | number) => {
     setLocalConfig(prev => ({
@@ -500,7 +521,8 @@ function SettingsPage() {
                   onChange={(e) => handleAiChange('provider', e.target.value as AIProvider)}
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="openai-compat">OpenAI-Compatible (Together AI, vLLM, etc.)</option>
+                  <option value="openai-compat">OpenAI-Compatible (vLLM, etc.)</option>
+                  <option value="together-ai">Together AI</option>
                   <option value="ollama">Ollama (Local)</option>
                   <option value="openrouter">OpenRouter</option>
                 </select>
@@ -509,14 +531,31 @@ function SettingsPage() {
                 </p>
               </div>
 
-              {/* API Key — only for cloud providers */}
-              {(localConfig.ai.provider === 'openai-compat' || localConfig.ai.provider === 'openrouter') && (
+              {/* API Key — required for cloud providers, optional for ollama */}
+              {localConfig.ai.provider !== 'ollama' ? (
                 <div className="grid gap-2">
                   <Label htmlFor="ai-key">API Key</Label>
                   <Input
                     id="ai-key"
                     type="password"
-                    placeholder={localConfig.ai.provider === 'openrouter' ? 'sk-or-...' : 'Paste your API key'}
+                    placeholder={
+                      localConfig.ai.provider === 'openrouter' ? 'sk-or-...'
+                      : localConfig.ai.provider === 'together-ai' ? 'Paste your Together AI key'
+                      : 'Paste your API key'
+                    }
+                    value={localConfig.ai.apiKey || ''}
+                    onChange={(e) => handleAiChange('apiKey', e.target.value)}
+                    className={errors['ai.apiKey'] ? 'border-destructive' : ''}
+                  />
+                  <ErrorMessage path="ai.apiKey" />
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  <Label htmlFor="ai-key">API Key <span className="text-xs text-muted-foreground font-normal">(optional)</span></Label>
+                  <Input
+                    id="ai-key"
+                    type="password"
+                    placeholder="Leave blank for unauthenticated local Ollama"
                     value={localConfig.ai.apiKey || ''}
                     onChange={(e) => handleAiChange('apiKey', e.target.value)}
                     className={errors['ai.apiKey'] ? 'border-destructive' : ''}
@@ -526,23 +565,33 @@ function SettingsPage() {
               )}
 
               <div className="grid gap-2">
-                <Label htmlFor="ai-base-url">Base URL (optional)</Label>
+                <Label htmlFor="ai-base-url">
+                  Base URL
+                  {localConfig.ai.provider !== 'openai-compat' && (
+                    <span className="ml-2 text-xs text-muted-foreground font-normal">(managed)</span>
+                  )}
+                </Label>
                 <Input
                   id="ai-base-url"
                   placeholder={
                     localConfig.ai.provider === 'ollama'
-                      ? 'http://localhost:11434'
+                      ? 'http://localhost:11434/v1'
                       : localConfig.ai.provider === 'openrouter'
                         ? 'https://openrouter.ai/api/v1'
-                        : 'https://api.together.xyz/v1'
+                        : localConfig.ai.provider === 'together-ai'
+                          ? 'https://api.together.xyz/v1'
+                          : 'https://api.openai.com/v1'
                   }
                   value={localConfig.ai.baseURL || ''}
                   onChange={(e) => handleAiChange('baseURL', e.target.value)}
-                  className={errors['ai.baseURL'] ? 'border-destructive' : ''}
+                  disabled={localConfig.ai.provider === 'openrouter'}
+                  className={`${errors['ai.baseURL'] ? 'border-destructive' : ''} ${localConfig.ai.provider === 'openrouter' ? 'opacity-60 cursor-not-allowed' : ''}`}
                 />
                 <ErrorMessage path="ai.baseURL" />
                 <p className="text-xs text-muted-foreground">
-                  Leave blank to use the provider default. Set for self-hosted or custom endpoints.
+                  {localConfig.ai.provider === 'openrouter'
+                    ? 'URL is fixed for OpenRouter.'
+                    : 'Override the default endpoint. Leave as-is unless using a custom or self-hosted deployment.'}
                 </p>
               </div>
               
