@@ -44,5 +44,8 @@ receipthero.db*
 paperless_schema.yml
 
 .turbo/*
+**/.turbo/*
+**/node_modules/*
 .turbo
 data
+**.db
