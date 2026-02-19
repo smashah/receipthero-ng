@@ -108,7 +108,16 @@ app.post('/:id/test', async (c) => {
       config
     );
 
-    return c.json({ items, workflowId: id, workflowName: workflow.name });
+    return c.json({
+      items,
+      workflowId: id,
+      workflowName: workflow.name,
+      ai: {
+        provider: config.ai.provider,
+        model: config.ai.model,
+        baseURL: config.ai.baseURL,
+      },
+    });
   } catch (error: any) {
     return c.json({ error: error.message || 'Extraction failed' }, 500);
   }

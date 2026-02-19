@@ -97,7 +97,9 @@ export async function extractWithSchema(
     .join('\n');
 
   const { baseURL, apiKey, model } = resolveEndpoint(config);
+  console.log(`[extract] Running extraction with "${model}" from ${config.ai.provider} at ${baseURL}`);
   const responseSchema = buildResponseSchema(jsonSchema);
+
 
   const res = await fetch(`${baseURL}/chat/completions`, {
     method: 'POST',

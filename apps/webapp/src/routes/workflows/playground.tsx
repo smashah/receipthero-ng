@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  Brain,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
@@ -163,7 +164,12 @@ function DropZone({ image, onImage, onClear }: DropZoneProps) {
 // ── Result panel ───────────────────────────────────────────────────────────────
 
 interface ResultPanelProps {
-  result: { items: unknown[]; workflowId: number; workflowName: string } | null;
+  result: {
+    items: unknown[];
+    workflowId: number;
+    workflowName: string;
+    ai?: { provider: string; model: string; baseURL?: string };
+  } | null;
   error: Error | null;
   isPending: boolean;
 }
@@ -202,6 +208,22 @@ function ResultPanel({ result, error, isPending }: ResultPanelProps) {
           </div>
           <span className="text-xs text-muted-foreground font-mono">{result.workflowName}</span>
         </div>
+        {result.ai && (
+          <div className="flex items-center gap-2 flex-wrap px-5 py-2.5 border-b border-border bg-muted/10">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-medium">
+              <Brain className="h-3 w-3" />
+              {result.ai.model}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              via <span className="font-medium text-foreground">{result.ai.provider}</span>
+            </span>
+            {result.ai.baseURL && (
+              <span className="text-xs text-muted-foreground font-mono truncate max-w-[220px]" title={result.ai.baseURL}>
+                {result.ai.baseURL}
+              </span>
+            )}
+          </div>
+        )}
         <pre className="text-xs font-mono p-5 overflow-auto max-h-[500px] text-foreground/90 leading-relaxed">
           {JSON.stringify(result.items, null, 2)}
         </pre>

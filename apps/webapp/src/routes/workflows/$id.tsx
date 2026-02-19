@@ -547,10 +547,24 @@ function WorkflowEditorPage() {
             </Button>
 
             {testResult && (
-              <div className="p-4 rounded-xl border border-border bg-card text-card-foreground text-sm space-y-2">
+              <div className="p-4 rounded-xl border border-border bg-card text-card-foreground text-sm space-y-3">
                 <div className="font-semibold text-primary">Extraction Result</div>
+                {testResult.ai && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-medium">
+                      <Brain className="h-3 w-3" />
+                      {testResult.ai.model}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      via <span className="font-medium text-foreground">{testResult.ai.provider}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground font-mono truncate max-w-[200px]" title={testResult.ai.baseURL}>
+                      {testResult.ai.baseURL}
+                    </span>
+                  </div>
+                )}
                 <pre className="bg-muted p-2 rounded-lg overflow-auto max-h-[200px] text-xs font-mono">
-                  {JSON.stringify(testResult, null, 2)}
+                  {JSON.stringify(testResult.items ?? testResult, null, 2)}
                 </pre>
               </div>
             )}
