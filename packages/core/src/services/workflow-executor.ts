@@ -2,7 +2,6 @@ import { PaperlessClient } from './paperless';
 import { extractWithSchema } from './extract';
 import { loadConfig } from './config';
 import { RetryQueue } from './retry-queue';
-import { createAIAdapter, type AIAdapter } from './ai-client';
 import { reporter } from './reporter';
 import { createLogger } from './logger';
 import { skippedDocuments } from './skipped-documents';
@@ -29,7 +28,7 @@ export function dataToMarkdown(data: Record<string, unknown>, workflowName: stri
   }
 
   if (Array.isArray(data.line_items) && data.line_items.length > 0) {
-    const items = data.line_items.map((item: any) => 
+    const items = data.line_items.map((item: any) =>
       `* ${item.quantity || 1} x **${item.name}** — ${item.totalPrice || item.unitPrice || '?'}`
     ).join('\n');
     content += `\n\n**Items:**\n${items}`;
@@ -58,7 +57,6 @@ export async function executeWorkflow(
   client: PaperlessClient,
   documentId: number,
   workflow: Workflow,
-  adapter: AIAdapter,
   retryQueue?: RetryQueue
 ) {
   const config = loadConfig();
@@ -67,13 +65,13 @@ export async function executeWorkflow(
   const docLogger = logger.withDocument(documentId);
 
   docLogger.info(`Starting workflow: ${workflow.name} (attempt ${attemptNum}/${maxRetries})`);
-  await reporter.report('workflow:processing', { 
-    documentId, 
-    workflowId: workflow.id, 
-    workflowName: workflow.name, 
-    attempts: attemptNum, 
-    progress: 5, 
-    status: 'processing' 
+  await reporter.report('workflow:processing', {
+    documentId,
+    workflowId: workflow.id,
+    workflowName: workflow.name,
+    attempts: attemptNum,
+    progress: 5,
+    status: 'processing'
   });
 
   try {
@@ -100,7 +98,7 @@ export async function executeWorkflow(
     if (!extractedData) {
       docLogger.debug(`Fetching document metadata...`);
       const doc = await client.getDocument(documentId);
-      
+
       docLogger.debug(`Downloading file...`);
       let fileBuffer: Buffer;
       try {
@@ -115,7 +113,7 @@ export async function executeWorkflow(
 
       docLogger.info(`Sending to AI for extraction...`);
       const jsonSchema = JSON.parse(workflow.jsonSchema);
-      const items = await extractWithSchema(base64, jsonSchema, workflow.promptInstructions || undefined, adapter, { existingTags: existingTagNames });
+      const items = await extractWithSchema(base64, jsonSchema, workflow.promptInstructions || undefined, config, { existingTags: existingTagNames });
 
       if (items.length === 0) {
         docLogger.warn(`No data extracted`);
@@ -133,7 +131,7 @@ export async function executeWorkflow(
       }
 
       extractedData = items[0];
-      
+
       // Persist immediately
       await reporter.report('workflow:processing', {
         documentId,
@@ -168,7 +166,7 @@ export async function executeWorkflow(
     // 4. Tags
     const doc = await client.getDocument(documentId);
     const tags = new Set<number>(doc.tags || []);
-    
+
     // Processed tag
     const processedTagId = await client.getOrCreateTag(workflow.processedTag);
     tags.add(processedTagId);
@@ -216,7 +214,7 @@ export async function executeWorkflow(
 
     // Apply updates
     await client.updateDocument(documentId, updates);
-    
+
     // Add Note
     const note = `## Workflow: ${workflow.name}\n\n${extractedData.summary || 'Data extracted successfully.'}\n\n---\n\n\`\`\`json\n${JSON.stringify(extractedData, null, 2)}\n\`\`\``;
     await client.addNote(documentId, note);
@@ -235,7 +233,7 @@ export async function executeWorkflow(
   } catch (error: any) {
     const msg = error instanceof Error ? error.message : String(error);
     docLogger.error(`Workflow failed: ${msg}`);
-    
+
     if (retryQueue) {
       if (await retryQueue.shouldGiveUp(documentId)) {
         await reporter.report('workflow:failed', { documentId, message: msg, progress: 100 });
@@ -244,7 +242,7 @@ export async function executeWorkflow(
             const tagId = await client.getOrCreateTag(workflow.failedTag);
             const doc = await client.getDocument(documentId);
             await client.updateDocument(documentId, { tags: [...(doc.tags || []), tagId] });
-          } catch (e) {}
+          } catch (e) { }
         }
         await retryQueue.remove(documentId);
       } else {

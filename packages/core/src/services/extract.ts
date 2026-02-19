@@ -1,76 +1,139 @@
-import { z } from 'zod';
 import Ajv from 'ajv';
-import type { AIAdapter } from './ai-client';
-import { chat } from '@tanstack/ai';
+import type { Config } from '@sm-rn/shared/schemas';
 
-const ajv = new Ajv();
+const ajv = new Ajv({ coerceTypes: true });
 
 export interface ExtractionContext {
   existingTags?: string[];
 }
 
+/** Derive the chat completions base URL and API key from config. */
+function resolveEndpoint(config: Config): { baseURL: string; apiKey: string; model: string } {
+  const { ai } = config;
+  switch (ai.provider) {
+    case 'openai-compat':
+      if (!ai.apiKey) throw new Error('AI API key is required for openai-compat provider.');
+      return {
+        baseURL: ai.baseURL || 'https://api.together.xyz/v1',
+        apiKey: ai.apiKey,
+        model: ai.model,
+      };
+    case 'openrouter':
+      if (!ai.apiKey) throw new Error('AI API key is required for openrouter provider.');
+      return {
+        baseURL: ai.baseURL || 'https://openrouter.ai/api/v1',
+        apiKey: ai.apiKey,
+        model: ai.model,
+      };
+    case 'ollama':
+      // Ollama's OpenAI-compat endpoint lives at /v1 on the Ollama host
+      return {
+        baseURL: `${ai.baseURL || 'http://localhost:11434'}/v1`,
+        apiKey: 'ollama',
+        model: ai.model,
+      };
+    default:
+      throw new Error(`Unknown AI provider: ${ai.provider}`);
+  }
+}
+
 /**
  * Generic extraction engine that uses a JSON Schema to extract structured data from an image.
+ *
+ * Uses plain fetch to POST /v1/chat/completions directly — this is the ONLY reliable way to
+ * avoid the `/v1/responses` endpoint that openai@6 routes all adapter calls through by default.
+ * That endpoint is unsupported by Together AI, OpenRouter, Ollama, and every other compat provider.
  */
 export async function extractWithSchema(
   base64Image: string,
   jsonSchema: any,
   promptInstructions: string | undefined,
-  adapter: AIAdapter,
+  config: Config,
   context?: ExtractionContext
 ): Promise<Record<string, unknown>[]> {
-  // Build context section for existing tags
   const existingTagsSection = context?.existingTags?.length
     ? `\n\nEXISTING DOCUMENT TAGS:\nThe document already has these tags: [${context.existingTags.join(', ')}]\nConsider these when suggesting additional tags - don't repeat them, but suggest complementary ones.`
     : '';
 
-  const basePrompt = `Extract structured data from this document image. Return a JSON object matching the provided schema.
-  
-CRITICAL REQUIREMENTS:
-- Dates MUST be in YYYY-MM-DD format.
-- Respond ONLY with valid JSON matching the schema.
-- If information is not visible, use reasonable defaults or omit if not applicable.`;
+  const schemaStr = JSON.stringify(jsonSchema, null, 2);
 
-  const systemPrompt = `${basePrompt}${promptInstructions ? `\n\nADDITIONAL INSTRUCTIONS:\n${promptInstructions}` : ''}${existingTagsSection}`;
+  const systemPrompt = [
+    'You are a structured data extraction engine.',
+    'Extract data from the provided image and return ONLY a valid JSON object — no markdown, no explanation, no code fences.',
+    '',
+    'The JSON must follow this exact structure:',
+    '{ "items": [ <one object per logical item found, matching the schema below> ] }',
+    '',
+    'SCHEMA FOR EACH ITEM:',
+    schemaStr,
+    '',
+    'CRITICAL REQUIREMENTS:',
+    '- Dates MUST be in YYYY-MM-DD format.',
+    '- Respond ONLY with the raw JSON object. No markdown. No ```json fences.',
+    '- If information is not visible, use reasonable defaults or omit optional fields.',
+    promptInstructions ? `\nADDITIONAL INSTRUCTIONS:\n${promptInstructions}` : '',
+    existingTagsSection,
+  ]
+    .filter(Boolean)
+    .join('\n');
 
-  // We wrap the user's schema in an object with an array of items
-  // This matches the Together AI / Llama 4 Maverick pattern for multiple extractions
-  // and maintains compatibility with ReceiptHero's internal expectations.
-  const wrappedSchema = z.object({
-    items: z.array(z.fromJSONSchema(jsonSchema) as any),
+  const { baseURL, apiKey, model } = resolveEndpoint(config);
+
+  const res = await fetch(`${baseURL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Extract all data from this image. Return only the JSON object.' },
+            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+          ],
+        },
+      ],
+    }),
   });
 
-  const result = await chat({
-    adapter,
-    systemPrompts: [systemPrompt],
-    messages: [
-      {
-        role: 'user' as const,
-        content: [
-          {
-            type: 'text' as const,
-            content: 'Extract data from this image following the schema and instructions.',
-          },
-          {
-            type: 'image' as const,
-            source: { type: 'data' as const, value: base64Image, mimeType: 'image/jpeg' as const },
-          },
-        ],
-      },
-    ],
-    outputSchema: wrappedSchema,
-  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`AI provider returned ${res.status}: ${errText.slice(0, 300)}`);
+  }
 
-  // Validate the items against the original JSON Schema using Ajv as a secondary check
-  // (TanStack AI already validates against the Zod schema generated from JSON Schema)
-  const validate = ajv.compile(jsonSchema);
-  const items = result.items || [];
+  const json = await res.json() as { choices?: { message?: { content?: string } }[] };
+  const rawText = json.choices?.[0]?.message?.content ?? '';
 
+  // Strip markdown fences if the model added them anyway
+  const cleaned = rawText
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/, '')
+    .trim();
+
+  let parsed: { items?: unknown[] };
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    // Some models wrap the JSON in extra text — try to extract the first {...} block
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error(`Model did not return valid JSON. Raw response: ${rawText.slice(0, 500)}`);
+    parsed = JSON.parse(match[0]);
+  }
+
+  const items = Array.isArray(parsed?.items) ? parsed.items : [];
+
+  // Validate each item against the original JSON Schema
+  // Strip $schema (Zod v4 emits 2020-12) — Ajv defaults to Draft 7 and rejects it
+  const { $schema: _ignored, ...ajvSchema } = jsonSchema;
+  const validate = ajv.compile(ajvSchema);
   for (const item of items) {
     const isValid = validate(item);
     if (!isValid) {
-      console.warn('Extracted item failed Ajv validation against original JSON Schema:', validate.errors);
-      // We still return it since Zod already validated it, but we log the warning
+      console.warn('Extracted item failed Ajv validation against JSON Schema:', validate.errors);
     }
   }
 

@@ -6,11 +6,11 @@ import {
   Plus, 
   Trash2, 
   CheckCircle2, 
-  Circle 
+  Circle,
+  FlaskConical,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
 
 export const Route = createFileRoute('/workflows/')({
   component: WorkflowsPage,
@@ -39,14 +39,20 @@ function WorkflowsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Workflows</h1>
           <p className="text-muted-foreground">Manage your AI document extraction pipelines</p>
         </div>
-        <Link 
-          to="/workflows/new"
-        >
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create Workflow
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to="/workflows/playground">
+            <Button variant="outline" className="gap-2">
+              <FlaskConical className="h-4 w-4" />
+              Playground
+            </Button>
+          </Link>
+          <Link to="/workflows/new">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create Workflow
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {isLoading ? (

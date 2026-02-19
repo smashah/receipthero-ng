@@ -1,15 +1,15 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { 
-  CreateWorkflowSchema, 
-  UpdateWorkflowSchema, 
+import {
+  CreateWorkflowSchema,
+  UpdateWorkflowSchema,
   ValidateSchemaRequest,
 } from '@sm-rn/shared/workflow-schemas';
-import { 
-  getWorkflows, 
-  getWorkflow, 
-  createWorkflow, 
-  updateWorkflow, 
+import {
+  getWorkflows,
+  getWorkflow,
+  createWorkflow,
+  updateWorkflow,
   deleteWorkflow,
   validateZodSource,
   extractWithSchema,
@@ -60,10 +60,10 @@ app.put('/:id', zValidator('json', UpdateWorkflowSchema), async (c) => {
 app.delete('/:id', async (c) => {
   const id = parseInt(c.req.param('id'), 10);
   const workflow = await getWorkflow(id);
-  
+
   if (!workflow) return c.json({ error: 'Workflow not found' }, 404);
   if (workflow.isBuiltIn) return c.json({ error: 'Built-in workflows cannot be deleted' }, 403);
-  
+
   await deleteWorkflow(id);
   return c.json({ success: true });
 });
@@ -105,7 +105,7 @@ app.post('/:id/test', async (c) => {
       body.image,
       jsonSchema,
       workflow.promptInstructions ?? undefined,
-      adapter
+      config
     );
 
     return c.json({ items, workflowId: id, workflowName: workflow.name });

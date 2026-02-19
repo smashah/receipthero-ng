@@ -1,5 +1,5 @@
 import { db, schema } from '../db';
-import { eq, desc, count } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import type { Workflow, NewWorkflow } from '../db/schema';
 import { z } from 'zod';
 import { loadConfig } from './config';
@@ -23,7 +23,7 @@ export async function getWorkflowForTag(tagName: string): Promise<Workflow | und
     .from(schema.workflows)
     .where(eq(schema.workflows.triggerTag, tagName))
     .all();
-  
+
   return all
     .filter(w => w.enabled)
     .sort((a, b) => b.priority - a.priority)[0];
@@ -46,12 +46,12 @@ export async function updateWorkflow(id: number, data: any): Promise<Workflow> {
   if (data.outputMapping && typeof data.outputMapping !== 'string') {
     updates.outputMapping = JSON.stringify(data.outputMapping);
   }
-  
+
   const res = await db.update(schema.workflows)
     .set(updates)
     .where(eq(schema.workflows.id, id))
     .returning().get();
-  
+
   if (!res) throw new Error('Workflow not found');
   return res as Workflow;
 }
@@ -73,7 +73,7 @@ export async function validateZodSource(zodSource: string) {
     // Execute to build schema
     const fn = new Function('z', `return ${zodSource}`);
     const result = fn(z);
-    
+
     // Convert to JSON Schema
     const jsonSchema = z.toJSONSchema(result);
     return { valid: true, jsonSchema };
@@ -83,16 +83,22 @@ export async function validateZodSource(zodSource: string) {
 }
 
 /**
- * Seeds the default built-in receipt workflow from configuration.
+ * Ensures the default built-in receipt workflow always exists.
+ * Uses a slug-based check so user-created workflows don't prevent seeding.
  */
 export async function seedDefaultWorkflows() {
   const config = loadConfig();
-  const [{ value: existingCount }] = await db.select({ value: count() }).from(schema.workflows);
-  
-  if (existingCount > 0) return;
+
+  const existing = await db
+    .select()
+    .from(schema.workflows)
+    .where(eq(schema.workflows.slug, 'receipt'))
+    .get();
+
+  if (existing) return;
 
   const now = new Date().toISOString();
-  
+
   // The current receipt schema as a Zod source string
   const receiptZodSource = `z.object({
   id: z.string(),
