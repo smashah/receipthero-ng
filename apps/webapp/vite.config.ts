@@ -6,6 +6,21 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
+function parseAllowedHosts() {
+  const rawHosts = process.env.ALLOWED_HOSTS || process.env.VITE_ALLOWED_HOSTS
+
+  if (!rawHosts || rawHosts.trim().length === 0 || rawHosts.trim() === '*') {
+    return true
+  }
+
+  return rawHosts
+    .split(',')
+    .map((host) => host.trim())
+    .filter(Boolean)
+}
+
+const allowedHosts = parseAllowedHosts()
+
 const config = defineConfig({
   plugins: [
     devtools(),
@@ -18,6 +33,14 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
+  server: {
+    host: true,
+    allowedHosts,
+  },
+  preview: {
+    host: true,
+    allowedHosts,
+  },
 })
 
 export default config

@@ -1,14 +1,20 @@
 import type { Config } from '@sm-rn/shared/schemas';
 import type { ProcessingLog, ProcessingEvent } from '@sm-rn/shared/types';
 
-// API base URL - defaults to localhost:3001 for development
+// API base URL - defaults to the current hostname with port 3001 for browser use.
+const DEFAULT_API_PORT = import.meta.env.VITE_API_PORT || '3001'
+const DEFAULT_WS_PORT = import.meta.env.VITE_WS_PORT || DEFAULT_API_PORT
+
 export const API_BASE_URL =
-  typeof window !== 'undefined' && import.meta.env.VITE_API_URL
-    ? import.meta.env.VITE_API_URL
-    : 'http://localhost:3001';
+  typeof window !== 'undefined'
+    ? import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:${DEFAULT_API_PORT}`
+    : import.meta.env.VITE_API_URL || `http://localhost:${DEFAULT_API_PORT}`;
 
 // WS base URL
-export const WS_BASE_URL = API_BASE_URL.replace(/^http/, 'ws');
+export const WS_BASE_URL =
+  typeof window !== 'undefined'
+    ? import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:${DEFAULT_WS_PORT}`
+    : import.meta.env.VITE_WS_URL || `ws://localhost:${DEFAULT_WS_PORT}`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
