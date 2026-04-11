@@ -26,6 +26,29 @@ export interface TestAIConnectionResult {
   error?: string;
 }
 
+export interface StructuredOutputOptions {
+  usePromptJsonMode: boolean;
+}
+
+function isGroqBaseUrl(baseURL: string | undefined): boolean {
+  if (!baseURL) {
+    return false;
+  }
+
+  try {
+    return new URL(baseURL).hostname.toLowerCase().includes('groq.com');
+  } catch {
+    return baseURL.toLowerCase().includes('groq.com');
+  }
+}
+
+export function getStructuredOutputOptions(config: Pick<Config, 'ai'>): StructuredOutputOptions {
+  return {
+    usePromptJsonMode:
+      config.ai.provider === 'openai-compat' && isGroqBaseUrl(config.ai.baseURL),
+  };
+}
+
 /**
  * Tests an AI provider connection by sending a simple chat message.
  * Creates a temporary adapter from the provided config and validates connectivity.

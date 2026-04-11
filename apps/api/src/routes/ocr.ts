@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { extractReceiptData, createAIAdapter, loadConfig, createLogger } from '@sm-rn/core';
+import { extractReceiptData, createAIAdapter, getStructuredOutputOptions, loadConfig, createLogger } from '@sm-rn/core';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
@@ -39,9 +39,10 @@ ocr.post('/', zValidator('json', OcrRequestSchema), async (c) => {
 
     // Create AI adapter
     const adapter = createAIAdapter(config);
+    const structuredOutputOptions = getStructuredOutputOptions(config);
 
     // Extract receipt data
-    const receipts = await extractReceiptData(base64Image, adapter);
+    const receipts = await extractReceiptData(base64Image, adapter, undefined, structuredOutputOptions);
 
     return c.json({ receipts });
   } catch (error) {
