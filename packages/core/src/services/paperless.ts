@@ -327,6 +327,9 @@ export class PaperlessClient {
       const receiptTag = tags.find((t: any) => t.name.toLowerCase() === receiptTagName.toLowerCase());
       if (receiptTag) {
         queryParts.push(`tags__id__all=${receiptTag.id}`);
+      } else {
+        console.warn(`[WARN] Receipt tag "${receiptTagName}" not found, returning no documents`);
+        return [];
       }
     }
 
@@ -617,4 +620,3 @@ export class PaperlessClient {
     return field.id;
   }
 }
-
