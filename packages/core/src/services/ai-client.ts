@@ -35,10 +35,19 @@ function isGroqBaseUrl(baseURL: string | undefined): boolean {
     return false;
   }
 
+  const isGroqHostname = (hostname: string): boolean => {
+    const hostnameLower = hostname.toLowerCase();
+    return hostnameLower === 'groq.com' || hostnameLower.endsWith('.groq.com');
+  };
+
   try {
-    return new URL(baseURL).hostname.toLowerCase().includes('groq.com');
+    return isGroqHostname(new URL(baseURL).hostname);
   } catch {
-    return baseURL.toLowerCase().includes('groq.com');
+    try {
+      return isGroqHostname(new URL(`https://${baseURL}`).hostname);
+    } catch {
+      return false;
+    }
   }
 }
 

@@ -5,6 +5,16 @@ import type { ProcessingLog, ProcessingEvent } from '@sm-rn/shared/types';
 const DEFAULT_API_PORT = import.meta.env.VITE_API_PORT || '3001'
 const DEFAULT_WS_PORT = import.meta.env.VITE_WS_PORT || DEFAULT_API_PORT
 
+function toWebSocketBaseUrl(value: string): string {
+  try {
+    const url = new URL(value)
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    return url.toString().replace(/\/$/, '')
+  } catch {
+    return value.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:').replace(/\/$/, '')
+  }
+}
+
 export const API_BASE_URL =
   typeof window !== 'undefined'
     ? import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:${DEFAULT_API_PORT}`
@@ -13,7 +23,9 @@ export const API_BASE_URL =
 // WS base URL
 export const WS_BASE_URL =
   typeof window !== 'undefined'
-    ? import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:${DEFAULT_WS_PORT}`
+    ? import.meta.env.VITE_WS_URL
+      || (import.meta.env.VITE_API_URL ? toWebSocketBaseUrl(import.meta.env.VITE_API_URL) : undefined)
+      || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:${DEFAULT_WS_PORT}`
     : import.meta.env.VITE_WS_URL || `ws://localhost:${DEFAULT_WS_PORT}`;
 
 // ─────────────────────────────────────────────────────────────────────────────

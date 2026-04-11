@@ -9,7 +9,11 @@ import { nitro } from 'nitro/vite'
 function parseAllowedHosts() {
   const rawHosts = process.env.ALLOWED_HOSTS || process.env.VITE_ALLOWED_HOSTS
 
-  if (!rawHosts || rawHosts.trim().length === 0 || rawHosts.trim() === '*') {
+  if (!rawHosts || rawHosts.trim().length === 0) {
+    return undefined
+  }
+
+  if (rawHosts.trim() === '*') {
     return true
   }
 
@@ -35,11 +39,11 @@ const config = defineConfig({
   ],
   server: {
     host: true,
-    allowedHosts,
+    ...(allowedHosts !== undefined ? { allowedHosts } : {}),
   },
   preview: {
     host: true,
-    allowedHosts,
+    ...(allowedHosts !== undefined ? { allowedHosts } : {}),
   },
 })
 

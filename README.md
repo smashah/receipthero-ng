@@ -133,7 +133,6 @@ open http://localhost:3000
 ```
 
 > 💡 **Remote / headless access:** if you open ReceiptHero from a hostname other than `localhost`, set `ALLOWED_HOSTS` to a comma-separated list of hostnames (or `*` to allow all hosts).
-
 > 📁 **Directory Structure:**
 > ```
 > ~/services/receipthero/
