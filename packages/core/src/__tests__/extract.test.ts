@@ -3,7 +3,19 @@ import { extractWithSchema } from '../services/extract';
 
 // Mock the TanStack AI chat function
 mock.module('@tanstack/ai', () => ({
-  chat: async ({ outputSchema, messages }: any) => {
+  chat: async ({ outputSchema }: any) => {
+    if (!outputSchema) {
+      return JSON.stringify({
+        items: [
+          {
+            vendor: 'Prompt Store',
+            amount: 45.67,
+            date: '2024-02-03',
+          },
+        ],
+      });
+    }
+
     // Basic mock response matching the wrapped schema structure
     return {
       items: [
@@ -42,5 +54,19 @@ describe('extractWithSchema', () => {
     expect(result[0].vendor).toBe('Test Store');
     expect(result[0].amount).toBe(12.34);
     expect(result[0].date).toBe('2024-01-01');
+  });
+
+  it('should parse prompt-json mode responses for Groq-compatible extraction', async () => {
+    const result = await extractWithSchema(
+      mockImage,
+      mockJsonSchema,
+      'Test instructions',
+      mockAdapter,
+      undefined,
+      { usePromptJsonMode: true }
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].vendor).toBe('Prompt Store');
   });
 });
