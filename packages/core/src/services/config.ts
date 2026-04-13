@@ -30,6 +30,8 @@ function getDefaultConfigTemplate(): Record<string, unknown> {
       failedTag: 'receipt-failed',
       skippedTag: 'receipt-skipped',
       maxRetries: 3,
+      useDocumentType: false,
+      documentTypeName: 'receipt',
       updateContent: true,
       addJsonPayload: true,
       autoTag: true,
@@ -153,6 +155,12 @@ export function loadConfig(): Config {
         ['processing', 'maxRetries'],
         process.env.MAX_RETRIES ? parseInt(process.env.MAX_RETRIES, 10) : undefined
       ),
+      useDocumentType: getConfigValueBoolean(
+        fileConfig,
+        ['processing', 'useDocumentType'],
+        process.env.USE_DOCUMENT_TYPE === 'true' ? true : process.env.USE_DOCUMENT_TYPE === 'false' ? false : undefined
+      ),
+      documentTypeName: getConfigValue(fileConfig, ['processing', 'documentTypeName'], process.env.DOCUMENT_TYPE_NAME),
       updateContent: getConfigValueBoolean(
         fileConfig,
         ['processing', 'updateContent'],

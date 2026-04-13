@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { chat } from '@tanstack/ai';
 import { ProcessedReceiptSchema } from '@sm-rn/shared/types';
 import type { AIAdapter } from './ai-client';
+import type { StructuredOutputOptions } from './ai-client';
 
 export const ReceiptExtractionSchema = z.object({
   receipts: z.array(ProcessedReceiptSchema),
@@ -79,7 +80,8 @@ PAYMENT METHODS: Common values include "cash", "credit", "debit", "check", "gift
 export async function extractReceiptData(
   base64Image: string,
   adapter: AIAdapter,
-  context?: ExtractionContext
+  context?: ExtractionContext,
+  options?: StructuredOutputOptions
 ) {
   // Build context section for existing tags
   const existingTagsSection = context?.existingTags?.length
@@ -89,26 +91,43 @@ export async function extractReceiptData(
   const systemPrompt = `${BASE_SYSTEM_PROMPT}${existingTagsSection}
 Extract all visible receipt data accurately. If information is not visible, use reasonable defaults or omit if not applicable. Respond only with valid JSON.`;
 
-  const result = await chat({
-    adapter,
-    systemPrompts: [systemPrompt],
-    messages: [
-      {
-        role: 'user' as const,
-        content: [
-          {
-            type: 'text' as const,
-            content: 'Extract receipt data from this image following the formatting and categorization rules.',
-          },
-          {
-            type: 'image' as const,
-            source: { type: 'data' as const, value: base64Image, mimeType: 'image/jpeg' as const },
-          },
+  const messages = [
+    {
+      role: 'user' as const,
+      content: [
+        {
+          type: 'text' as const,
+          content: options?.usePromptJsonMode
+            ? 'Extract receipt data from this image following the formatting and categorization rules. Return a single JSON object with a top-level "receipts" array.'
+            : 'Extract receipt data from this image following the formatting and categorization rules.',
+        },
+        {
+          type: 'image' as const,
+          source: { type: 'data' as const, value: base64Image, mimeType: 'image/jpeg' as const },
+        },
+      ],
+    },
+  ]
+
+  const rawResult = options?.usePromptJsonMode
+    ? JSON.parse(extractJsonString(
+      await chat({
+        adapter,
+        systemPrompts: [
+          `${systemPrompt}\nReturn only valid JSON. Do not wrap the response in markdown fences or add commentary.`,
         ],
-      },
-    ],
-    outputSchema: ReceiptExtractionSchema,
-  });
+        messages,
+        stream: false as const,
+      })
+    ))
+    : await chat({
+      adapter,
+      systemPrompts: [systemPrompt],
+      messages,
+      outputSchema: ReceiptExtractionSchema,
+    });
+
+  const result = ReceiptExtractionSchema.parse(rawResult);
 
   // TanStack AI returns typed, validated data — no manual JSON.parse needed
   // Strip 'conversions' field from each receipt - it's populated by currency service, not AI
@@ -119,4 +138,29 @@ Extract all visible receipt data accurately. If information is not visible, use 
   }
 
   return receipts;
+}
+
+function extractJsonString(result: unknown): string {
+  if (typeof result === 'string') {
+    return stripMarkdownCodeFence(result);
+  }
+
+  if (result && typeof result === 'object') {
+    const content = (result as { content?: unknown }).content;
+    if (typeof content === 'string') {
+      return stripMarkdownCodeFence(content);
+    }
+  }
+
+  throw new Error('AI response was not a JSON string');
+}
+
+function stripMarkdownCodeFence(value: string): string {
+  const trimmed = value.trim();
+
+  if (!trimmed.startsWith('```')) {
+    return trimmed;
+  }
+
+  return trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 }

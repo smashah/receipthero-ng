@@ -2,6 +2,7 @@ import { z } from 'zod';
 import Ajv from 'ajv';
 import type { AIAdapter } from './ai-client';
 import { chat } from '@tanstack/ai';
+import type { StructuredOutputOptions } from './ai-client';
 
 const ajv = new Ajv();
 
@@ -17,7 +18,8 @@ export async function extractWithSchema(
   jsonSchema: any,
   promptInstructions: string | undefined,
   adapter: AIAdapter,
-  context?: ExtractionContext
+  context?: ExtractionContext,
+  options?: StructuredOutputOptions
 ): Promise<Record<string, unknown>[]> {
   // Build context section for existing tags
   const existingTagsSection = context?.existingTags?.length
@@ -40,26 +42,41 @@ CRITICAL REQUIREMENTS:
     items: z.array(z.fromJSONSchema(jsonSchema) as any),
   });
 
-  const result = await chat({
-    adapter,
-    systemPrompts: [systemPrompt],
-    messages: [
-      {
-        role: 'user' as const,
-        content: [
-          {
-            type: 'text' as const,
-            content: 'Extract data from this image following the schema and instructions.',
-          },
-          {
-            type: 'image' as const,
-            source: { type: 'data' as const, value: base64Image, mimeType: 'image/jpeg' as const },
-          },
+  const messages = [
+    {
+      role: 'user' as const,
+      content: [
+        {
+          type: 'text' as const,
+          content: options?.usePromptJsonMode
+            ? `Extract data from this image following the schema and instructions. Return a single JSON object with a top-level \"items\" array that matches this JSON Schema for each item: ${JSON.stringify(jsonSchema)}`
+            : 'Extract data from this image following the schema and instructions.',
+        },
+        {
+          type: 'image' as const,
+          source: { type: 'data' as const, value: base64Image, mimeType: 'image/jpeg' as const },
+        },
+      ],
+    },
+  ]
+
+  const result = options?.usePromptJsonMode
+    ? parsePromptJsonResult(
+      await chat({
+        adapter,
+        systemPrompts: [
+          `${systemPrompt}\n\nReturn only valid JSON. Do not wrap the response in markdown fences or add commentary.`,
         ],
-      },
-    ],
-    outputSchema: wrappedSchema,
-  });
+        messages,
+        stream: false as const,
+      })
+    )
+    : await chat({
+      adapter,
+      systemPrompts: [systemPrompt],
+      messages,
+      outputSchema: wrappedSchema,
+    });
 
   // Validate the items against the original JSON Schema using Ajv as a secondary check
   // (TanStack AI already validates against the Zod schema generated from JSON Schema)
@@ -75,4 +92,43 @@ CRITICAL REQUIREMENTS:
   }
 
   return items as Record<string, unknown>[];
+}
+
+function parsePromptJsonResult(result: unknown): { items: unknown[] } {
+  const parsed = JSON.parse(extractJsonString(result));
+
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    !Array.isArray((parsed as { items?: unknown[] }).items)
+  ) {
+    throw new Error('AI response did not match the expected JSON object shape');
+  }
+
+  return { items: (parsed as { items: unknown[] }).items };
+}
+
+function extractJsonString(result: unknown): string {
+  if (typeof result === 'string') {
+    return stripMarkdownCodeFence(result);
+  }
+
+  if (result && typeof result === 'object') {
+    const content = (result as { content?: unknown }).content;
+    if (typeof content === 'string') {
+      return stripMarkdownCodeFence(content);
+    }
+  }
+
+  throw new Error('AI response was not a JSON string');
+}
+
+function stripMarkdownCodeFence(value: string): string {
+  const trimmed = value.trim();
+
+  if (!trimmed.startsWith('```')) {
+    return trimmed;
+  }
+
+  return trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 }

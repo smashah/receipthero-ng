@@ -2,7 +2,7 @@ import { PaperlessClient } from './paperless';
 import { extractReceiptData } from './ocr';
 import { loadConfig } from './config';
 import { RetryQueue } from './retry-queue';
-import { createAIAdapter, type AIAdapter } from './ai-client';
+import { createAIAdapter, getStructuredOutputOptions, type AIAdapter } from './ai-client';
 import { reporter } from './reporter';
 import { createLogger } from './logger';
 import { skippedDocuments } from './skipped-documents';
@@ -79,7 +79,8 @@ export async function processPaperlessDocument(
   adapter: AIAdapter,
   retryQueue?: RetryQueue,
   failedTag?: string,
-  forceRetryStrategy?: 'full' | 'partial'
+  forceRetryStrategy?: 'full' | 'partial',
+  structuredOutputOptions?: { usePromptJsonMode: boolean }
 ) {
   const config = loadConfig();
   const retryStrategy = forceRetryStrategy || config.processing.retryStrategy || 'partial';
@@ -218,7 +219,7 @@ export async function processPaperlessDocument(
 
         let receipts: any[];
         try {
-          receipts = await extractReceiptData(base64, adapter, { existingTags: existingTagNamesLegacy });
+          receipts = await extractReceiptData(base64, adapter, { existingTags: existingTagNamesLegacy }, structuredOutputOptions);
           docLogger.debug(` ✓ AI extraction complete, found ${receipts.length} receipt(s)`);
         } catch (ocrError: any) {
           docLogger.error(` ✗ AI extraction failed`, {
@@ -640,7 +641,7 @@ export async function processPaperlessDocument(
 
       let receipts: any[];
       try {
-        receipts = await extractReceiptData(base64, adapter, { existingTags: existingTagNames });
+        receipts = await extractReceiptData(base64, adapter, { existingTags: existingTagNames }, structuredOutputOptions);
         docLogger.debug(` ✓ AI extraction complete, found ${receipts.length} receipt(s)`);
       } catch (ocrError: any) {
         docLogger.error(` ✗ AI extraction failed`, {
@@ -1038,6 +1039,7 @@ export async function runAutomation(): Promise<{
   // Create AI adapter with optional Helicone
   logger.debug('Initializing AI adapter...');
   const adapter = createAIAdapter(config);
+  const structuredOutputOptions = getStructuredOutputOptions(config);
 
   const retryQueue = new RetryQueue(config.processing.maxRetries);
   await retryQueue.logStats();
@@ -1053,7 +1055,7 @@ export async function runAutomation(): Promise<{
   // If no workflows found, try to process as legacy receipt
   if (workflowsList.length === 0) {
     logger.warn('No workflows found in database. Falling back to legacy receipt processing.');
-    return await runLegacyAutomation(client, adapter, retryQueue, config);
+    return await runLegacyAutomation(client, adapter, retryQueue, config, structuredOutputOptions);
   }
 
   const processedDocumentIds = new Set<number>();
@@ -1127,7 +1129,13 @@ export async function runAutomation(): Promise<{
 /**
  * Legacy fallback automation.
  */
-async function runLegacyAutomation(client: PaperlessClient, adapter: AIAdapter, retryQueue: RetryQueue, config: any) {
+async function runLegacyAutomation(
+  client: PaperlessClient,
+  adapter: AIAdapter,
+  retryQueue: RetryQueue,
+  config: any,
+  structuredOutputOptions: { usePromptJsonMode: boolean }
+) {
   const unprocessed = await client.getUnprocessedDocuments({
     processedTagName: config.processing.processedTag,
     receiptTagName: config.processing.receiptTag,
@@ -1137,12 +1145,12 @@ async function runLegacyAutomation(client: PaperlessClient, adapter: AIAdapter, 
 
   for (const legacyDoc of unprocessed) {
     await reporter.report('receipt:detected', { documentId: legacyDoc.id, fileName: legacyDoc.title, status: 'detected', progress: 0 });
-    await processPaperlessDocument(client, legacyDoc.id, adapter, retryQueue, config.processing.failedTag);
+    await processPaperlessDocument(client, legacyDoc.id, adapter, retryQueue, config.processing.failedTag, undefined, structuredOutputOptions);
   }
 
   const readyForRetry = await retryQueue.getReadyForRetry();
   for (const item of readyForRetry) {
-    await processPaperlessDocument(client, item.documentId, adapter, retryQueue, config.processing.failedTag);
+    await processPaperlessDocument(client, item.documentId, adapter, retryQueue, config.processing.failedTag, undefined, structuredOutputOptions);
   }
 
   return {
@@ -1183,6 +1191,7 @@ export async function processDocumentsByIds(documentIds: number[]): Promise<{
 
   // Create AI adapter
   const adapter = createAIAdapter(config);
+  const structuredOutputOptions = getStructuredOutputOptions(config);
   const retryQueue = new RetryQueue(config.processing.maxRetries);
 
   let processed = 0;
@@ -1192,7 +1201,7 @@ export async function processDocumentsByIds(documentIds: number[]): Promise<{
   for (const documentId of documentIds) {
     try {
       await reporter.report('receipt:detected', { documentId, status: 'detected', progress: 0 });
-      await processPaperlessDocument(client, documentId, adapter, retryQueue, config.processing.failedTag);
+      await processPaperlessDocument(client, documentId, adapter, retryQueue, config.processing.failedTag, undefined, structuredOutputOptions);
       processed++;
     } catch (error: any) {
       logger.error(`Failed to process webhook-queued document ${documentId}`, { error: error.message });
@@ -1203,4 +1212,3 @@ export async function processDocumentsByIds(documentIds: number[]): Promise<{
   logger.info(`Webhook-queued processing complete: ${processed} processed, ${failed} failed, ${skipped} skipped`);
   return { processed, failed, skipped };
 }
-

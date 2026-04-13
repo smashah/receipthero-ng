@@ -2,7 +2,7 @@ import { PaperlessClient } from './paperless';
 import { extractWithSchema } from './extract';
 import { loadConfig } from './config';
 import { RetryQueue } from './retry-queue';
-import { createAIAdapter, type AIAdapter } from './ai-client';
+import { getStructuredOutputOptions, type AIAdapter } from './ai-client';
 import { reporter } from './reporter';
 import { createLogger } from './logger';
 import { skippedDocuments } from './skipped-documents';
@@ -62,6 +62,7 @@ export async function executeWorkflow(
   retryQueue?: RetryQueue
 ) {
   const config = loadConfig();
+  const structuredOutputOptions = getStructuredOutputOptions(config);
   const attemptNum = retryQueue ? await retryQueue.getAttempts(documentId) + 1 : 1;
   const maxRetries = config.processing.maxRetries || 3;
   const docLogger = logger.withDocument(documentId);
@@ -115,7 +116,14 @@ export async function executeWorkflow(
 
       docLogger.info(`Sending to AI for extraction...`);
       const jsonSchema = JSON.parse(workflow.jsonSchema);
-      const items = await extractWithSchema(base64, jsonSchema, workflow.promptInstructions || undefined, adapter, { existingTags: existingTagNames });
+      const items = await extractWithSchema(
+        base64,
+        jsonSchema,
+        workflow.promptInstructions || undefined,
+        adapter,
+        { existingTags: existingTagNames },
+        structuredOutputOptions
+      );
 
       if (items.length === 0) {
         docLogger.warn(`No data extracted`);
