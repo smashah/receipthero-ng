@@ -69,5 +69,9 @@ RUN cd apps/webapp && pnpm run build
 # Expose webapp port only - API (3001) and Worker are internal
 EXPOSE 3000
 
-# Default command - start production server via turborepo
-CMD ["pnpm", "run", "start"]
+# Install NodeJS for the next command
+RUN apt-get update && apt-get install -y nodejs npm && rm -rf /var/lib/apt/lists/*
+
+# 1. Setup database (creates SQLite file and runs migrations)
+# 2. Start worker, API, and webapp concurrently
+CMD ["sh","-lc","cd /app && pnpm --filter @sm-rn/core run db:setup && (cd apps/worker && pnpm run start) & (cd apps/api && pnpm run start) & cd apps/webapp && pnpm run start"]

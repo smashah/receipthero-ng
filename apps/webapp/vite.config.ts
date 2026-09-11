@@ -6,7 +6,13 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
+const allowed = (process.env.ALLOWED_HOSTS || 'localhost')
+  .split(',')
+  .map((h) => h.trim())
+
 const config = defineConfig({
+  server: { host: true, allowedHosts: allowed },
+  preview: { host: true, allowedHosts: allowed },
   plugins: [
     devtools(),
     nitro(),
